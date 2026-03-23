@@ -1,6 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 module Automata where
-
-import Data.Char
 
 data DFA = DFA
     { states :: Int
