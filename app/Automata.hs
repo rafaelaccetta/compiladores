@@ -1,25 +1,25 @@
-Module Automata where
+module Automata where
 
-data DFA Q S = DFA
-    { states :: [Q]
-    , transition :: Q -> S -> Q
-    , start :: Q
-    , final :: [Q]
+import Data.Char
+
+data DFA = DFA
+    { states :: Int
+    , transition :: Int -> Char -> Int
+    , start :: Int
+    , final :: [Int]
     }
 
-data NFA Q S = NFA
-    { states :: [Q]
-    , transition :: Q -> S -> [Q]
-    , start :: Q
-    , final :: [Q]
+data NFA = NFA
+    { states :: Int
+    , transition :: Int -> Char -> [Int]
+    , start :: Int
+    , final :: [Int]
     }
 
-data EpsilonNFA Q S = EpsilonNFA
-    { states :: [Q]
-    , transition :: Q -> (Maybe S) -> [Q]
-    , start :: Q
-    , final :: [Q]
+data EpsilonNFA = EpsilonNFA
+    { states :: Int
+    , transition :: Int -> Maybe Char -> [Int]
+    , start :: Int
+    , final :: [Int]
     }
 
-epsilonNFA2NFA :: EpsilonNFA Q S -> NFA Q S
-epsilonNFA2NFA {}
