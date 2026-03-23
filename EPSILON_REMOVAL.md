@@ -122,6 +122,48 @@ Isso faz sentido: o estado 2 no NFA original "equivale" a estar em {0,2,3}, que 
 
 ---
 
+## Antes e depois
+
+### ε-NFA (entrada)
+
+| Estado | `'a'` | `'b'` | `ε`    | Final? |
+|--------|-------|-------|--------|--------|
+| →0     | {1}   | {}    | {}     | Não    |
+| 1      | {}    | {2}   | {}     | Não    |
+| 2      | {}    | {}    | {0, 3} | Não    |
+| 3      | {}    | {}    | {}     | **Sim** |
+
+```
+         a           b           ε
+  →[0] -----> [1] -----> [2] -------> [3]* (final)
+    ↑                     |
+    └──────────ε───────────┘
+```
+
+### NFA sem ε (saída do `removeEpsilon`)
+
+| Estado | `'a'` | `'b'`     | Final? |
+|--------|-------|-----------|--------|
+| →0     | {1}   | {}        | Não    |
+| 1      | {}    | {0, 2, 3} | Não    |
+| **2**  | {1}   | {}        | **Sim** |
+| **3**  | {}    | {}        | **Sim** |
+
+```
+         a               b
+  →[0] -----> [1] -----------------> [0], [2]*, [3]*
+                          [2]* --a--> [1]
+                          [3]*  (sem transições)
+```
+
+O que mudou:
+- As transições `ε` **sumiram**
+- `1 --b-->` expandiu de `{2}` para `{0, 2, 3}` (absorveu o ε-fecho de 2)
+- `2 --a--> {1}` é uma transição **nova** (surgiu porque ε-fecho(2) contém o estado 0, que tem `0 --a--> 1`)
+- Estado **2 virou final** (seu ε-fecho alcançava o estado 3)
+
+---
+
 ## Simulação do NFA resultante
 
 A função `acceptsNFA` executa o NFA mantendo um **conjunto de estados ativos** e aplicando a nova transição a cada símbolo lido:
