@@ -53,7 +53,7 @@ main = do
     putStrLn "\n=== Testes de aceitacao no NFA resultante ==="
     let testar s = putStrLn $ "  \"" ++ s ++ "\" -> " ++
                               if acceptsNFA nfa s then "ACEITA" else "REJEITA"
-    testar ""      -- aceita (zero repetições de ab... mas depende da semântica)
+    testar ""      -- rejeita
     testar "ab"    -- aceita
     testar "abab"  -- aceita
     testar "a"     -- rejeita
