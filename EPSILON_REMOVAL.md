@@ -99,6 +99,8 @@ Em português:
 
 Isso captura o loop: ao ler `b` a partir do estado 1, o NFA vai para {0, 2, 3} — já está simultaneamente no início (pronto para repetir `ab`) e no estado final (pronto para aceitar).
 
+> **Resumo:** para cada estado `x` e transição `y`, analisa-se o ε-fecho de `x` e coletam-se todos os estados alcançáveis a partir desses estados usando `y`. Esse conjunto (após o ε-fecho) é o destino de `x` por `y` no NFA resultante.
+
 ### Novos estados finais
 
 Um estado `q` passa a ser final no NFA se **algum estado no seu ε-fecho era final no ε-NFA**:
