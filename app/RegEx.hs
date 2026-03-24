@@ -1,6 +1,5 @@
 module RegEx where
 
-
 data RegEx = Literal Char
     | Seq RegEx RegEx
     | Union RegEx RegEx

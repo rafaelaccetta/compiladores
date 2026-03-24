@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Automata where
-import RegEx (RegEx (Literal, Seq, Union, Star))
+import RegEx (RegEx (Literal, Seq, Union, Star), parseRegEx)
 
 data DFA = DFA
     { states :: Int
@@ -76,7 +76,7 @@ regEx2EpsilonNFA (Union r1 r2) =
                 case ((st - r1_states - 1) `elem` r2_final, sy) of
                     (True, Nothing) -> r1_states + r2_states + 1 :
                         map (+ (r1_states + 1)) (r2_trans (st - r1_states - 1) Nothing)
-                    _ -> map (+ (r1_states +1 )) (r1_trans (st - r1_states - 1) sy)
+                    _ -> map (+ (r1_states +1 )) (r2_trans (st - r1_states - 1) sy)
             else []
         , start = 0
         , final = [r1_states + r2_states + 1]
@@ -101,3 +101,21 @@ regEx2EpsilonNFA (Star r) =
         , start = 0
         , final = [r_states + 1]
         }
+
+
+
+printEpsilonNFA :: EpsilonNFA -> String
+printEpsilonNFA (EpsilonNFA stts trans strt fnl) =
+    "states: " ++ show stts ++ "\n transition: \n" ++
+        foldMap
+            (\st ->
+                foldMap (\sy -> if null (trans st sy) then "" else
+                    "(" ++ show st ++ ", " ++ maybe "ε" show sy ++ ") -> " ++ show (trans st sy) ++ "\n")
+                    (Nothing : map Just ['A'..'z']))
+            [0..stts]
+        ++ "start: " ++ show strt ++
+        "\nfinal " ++ show fnl
+
+main :: IO()
+main = 
+    putStrLn (maybe "erro" (printEpsilonNFA . regEx2EpsilonNFA) (parseRegEx "ab+" []))
