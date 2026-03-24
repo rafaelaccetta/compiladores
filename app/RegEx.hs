@@ -1,9 +1,7 @@
 module RegEx where
 
 
-data RegEx = Empty
-    | Epsilon
-    | Literal Char
+data RegEx = Literal Char
     | Seq RegEx RegEx
     | Union RegEx RegEx
     | Star RegEx
@@ -17,13 +15,13 @@ parseRegEx ('*':as) (r1:rs) = parseRegEx as (Star r1 : rs)
 parseRegEx (a:as) rs = parseRegEx as (Literal a : rs)
 parseRegEx _ _ = Nothing
 
-printre :: Maybe RegEx -> String
-printre (Just (Literal a)) = [a]
-printre (Just (Seq a b)) = printre (Just a) ++ ";" ++ printre (Just b)
-printre (Just (Union a b)) = "(" ++ printre (Just a) ++ " + " ++ printre (Just b) ++ ")"
-printre (Just (Star a))= "(" ++ printre (Just a) ++ ")" ++ "*"
-printre _ = "erro"
+printre :: RegEx -> String
+printre (Literal a) = [a]
+printre (Seq a b) = printre a ++ ";" ++ printre b
+printre (Union a b) = "(" ++ printre a ++ " + " ++ printre b ++ ")"
+printre (Star a)= "(" ++ printre a ++ ")" ++ "*"
 
 
 main :: IO ()
-main = putStrLn (printre (parseRegEx "ab;*a+*" []))
+main = putStrLn
+    (maybe "erro" printre (parseRegEx "ab;*a+*" []))
