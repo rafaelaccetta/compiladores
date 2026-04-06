@@ -4,6 +4,8 @@ module Main where
 import System.IO (hSetEncoding, stdout, utf8)
 import Automata
 import EpsilonRemoval
+import NFAtoDFA
+import Tests (runAll)
 
 -- Exemplo: EpsilonNFA que reconhece a linguagem (ab)*
 --
@@ -29,33 +31,35 @@ exampleENFA = EpsilonNFA
     trans 2 Nothing    = [0, 3]  -- transições epsilon
     trans _ _          = []
 
--- Função auxiliar: verifica se um NFA aceita uma string
--- (execução por conjunto de estados)
-acceptsNFA :: NFA -> String -> Bool
-acceptsNFA (NFA _ t s0 fs) input = any (`elem` fs) (foldl step [s0] input)
-  where
-    step qs c = concatMap (`t` c) qs
-
 main :: IO ()
 main = do
     hSetEncoding stdout utf8
     let nfa = removeEpsilon exampleENFA
+        dfa = nfaToDFA nfa ['a', 'b']
 
-    putStrLn "=== ε-fecho de cada estado ==="
-    mapM_ (\q -> putStrLn $ "  ε-fecho(" ++ show q ++ ") = "
+    putStrLn "=== e-fecho de cada estado ==="
+    mapM_ (\q -> putStrLn $ "  e-fecho(" ++ show q ++ ") = "
                            ++ show (epsilonClosure exampleENFA [q]))
           [0..3]
 
-    putStrLn "\n=== Estados finais do NFA resultante ==="
-    let NFA { final = fs } = nfa
-    print fs
+    putStrLn "\n=== Estados finais do NFA resultante (epsilon-remocao) ==="
+    let NFA _ _ _ nfaFinals = nfa
+    print nfaFinals
 
-    putStrLn "\n=== Testes de aceitacao no NFA resultante ==="
-    let testar s = putStrLn $ "  \"" ++ s ++ "\" -> " ++
-                              if acceptsNFA nfa s then "ACEITA" else "REJEITA"
-    testar ""      -- rejeita
-    testar "ab"    -- aceita
-    testar "abab"  -- aceita
-    testar "a"     -- rejeita
-    testar "b"     -- rejeita
-    testar "aba"   -- rejeita
+    putStrLn "\n=== Aceitacao no NFA (epsilon-remocao) ==="
+    mapM_ (\s -> putStrLn $ "  \"" ++ s ++ "\" -> " ++
+                             if acceptsNFA nfa s then "ACEITA" else "REJEITA")
+          ["", "ab", "abab", "a", "b", "aba"]
+
+    putStrLn "\n=== DFA resultante (construcao de subconjuntos) ==="
+    let DFA n _ _ dfaFinals = dfa
+    putStrLn $ "  estados: " ++ show n
+    putStrLn $ "  finais:  " ++ show dfaFinals
+
+    putStrLn "\n=== Aceitacao no DFA ==="
+    mapM_ (\s -> putStrLn $ "  \"" ++ s ++ "\" -> " ++
+                             if acceptsDFA dfa s then "ACEITA" else "REJEITA")
+          ["", "ab", "abab", "a", "b", "aba"]
+
+    putStrLn ""
+    runAll
