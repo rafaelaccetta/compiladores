@@ -64,8 +64,6 @@ executable compiladores
     other-modules:  RegEx
                     Automata
                     EpsilonRemoval
-                    NFAtoDFA
-                    Tests
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
