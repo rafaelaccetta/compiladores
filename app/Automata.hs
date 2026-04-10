@@ -2,9 +2,11 @@
 module Automata where
 import RegEx (RegEx (Literal, Seq, Union, Star), parseRegEx)
 
+import Data.List (nub, sort)
+
 data DFA = DFA
     { states :: Int
-    , transition :: Int -> Char -> Maybe Int
+    , transition :: Int -> Char -> Int
     , start :: Int
     , final :: [Int]
     }
@@ -102,11 +104,77 @@ regEx2EpsilonNFA (Star r) =
         , final = [r_states + 1]
         }
 
+----------------------------------------------------------------------------------
 
+-- | Retorna todos os estados alcançáveis a partir de 'initialStates'
+-- usando apenas transições epsilon (Nothing). O próprio estado está
+-- sempre no seu fecho.
+--
+-- Exemplo: se o estado 0 tem ε → 1 e 1 tem ε → 2, então
+--   epsilonClosure enfa [0] == [0, 1, 2]
+epsilonClosure :: EpsilonNFA -> [Int] -> [Int]
+epsilonClosure (EpsilonNFA _ t _ _) initialStates =
+    sort $ go initialStates initialStates
+  where
+    -- BFS: 'visited' acumula todos os estados já encontrados;
+    --       'queue'   é a fronteira de estados ainda a explorar.
+    go visited []         = nub visited
+    go visited (s:queue)  =
+        let newStates = filter (`notElem` visited) (t s Nothing)
+        in  go (visited ++ newStates) (queue ++ newStates)
+
+-- | Converte um EpsilonNFA em um NFA equivalente sem transições epsilon.
+--
+-- Algoritmo (Thompson):
+--   1. Nova transição: δ'(q, a) = ε-fecho(⋃{ δ(r, Just a) | r ∈ ε-fecho({q}) })
+--   2. Novos estados finais: q ∈ F' sse ε-fecho({q}) ∩ F ≠ ∅
+--   3. Estado inicial: inalterado
+--   4. Número de estados: inalterado
+removeEpsilon :: EpsilonNFA -> NFA
+removeEpsilon enfa@(EpsilonNFA n t s0 finalStates) = NFA
+    { states     = n
+    , transition = newTransition
+    , start      = s0
+    , final      = newFinalStates
+    }
+  where
+    -- Para cada estado q e símbolo a:
+    --   1. calcula o ε-fecho de {q}
+    --   2. aplica a transição 'a' em cada estado do fecho
+    --   3. calcula o ε-fecho do resultado
+    newTransition q c =
+        let closure   = epsilonClosure enfa [q]
+            reachable = concatMap (\r -> t r (Just c)) closure
+        in  epsilonClosure enfa reachable
+
+    -- q é final se algum estado no seu ε-fecho era final no EpsilonNFA
+    newFinalStates =
+        filter (\q -> any (`elem` finalStates) (epsilonClosure enfa [q]))
+               [0 .. n - 1]
+
+----------------------------------------------------------------------------------
+
+toPowersOf2 :: Int -> [Int]
+toPowersOf2 0 = []
+toPowersOf2 n = if n `rem` 2 == 1
+    then 0 : map (+1) (toPowersOf2 (n `div` 2))
+    else map (+1) (toPowersOf2 (n `div` 2))
+
+fromPowersOf2 :: [Int] -> Int
+fromPowersOf2 = foldr (\ a -> (+) (2 ^ a)) 0 . nub
+
+nfa2DFA :: NFA -> DFA
+nfa2DFA (NFA nfa_states nfa_trans nfa_start nfa_final) =
+    DFA
+    { states = 2 ^ nfa_states
+    , transition = \st sy -> fromPowersOf2 (concatMap (`nfa_trans` sy) (toPowersOf2 st))
+    , start = 2 ^ nfa_start
+    , final = filter (any (`elem` nfa_final) . toPowersOf2) [1..2^nfa_states]
+    }
 
 printEpsilonNFA :: EpsilonNFA -> String
 printEpsilonNFA (EpsilonNFA stts trans strt fnl) =
-    "states: " ++ show stts ++ "\n transition: \n" ++
+    "states: " ++ show stts ++ "\ntransition: \n" ++
         foldMap
             (\st ->
                 foldMap (\sy -> if null (trans st sy) then "" else
@@ -116,6 +184,30 @@ printEpsilonNFA (EpsilonNFA stts trans strt fnl) =
         ++ "start: " ++ show strt ++
         "\nfinal " ++ show fnl
 
+printNFA :: NFA -> String
+printNFA (NFA stts trans strt fnl) =
+    "states: " ++ show stts ++ "\ntransition: \n" ++
+        foldMap
+            (\st ->
+                foldMap (\sy -> if null (trans st sy) then "" else
+                    "(" ++ show st ++ ", " ++ show sy ++ ") -> " ++ show (trans st sy) ++ "\n")
+                    ['A'..'z'])
+            [0..stts]
+        ++ "start: " ++ show strt ++
+        "\nfinal " ++ show fnl
+
+printDFA :: DFA -> String
+printDFA (DFA stts trans strt fnl) =
+    "states: " ++ show stts ++ "\ntransition: \n" ++
+        foldMap
+            (\st ->
+                foldMap (\sy -> if trans st sy == 0 then "" else
+                    "(" ++ show st ++ ", " ++ show sy ++ ") -> " ++ show (trans st sy) ++ "\n")
+                    ['A'..'z'])
+            [0..stts]
+        ++ "start: " ++ show strt ++
+        "\nfinal " ++ show fnl
+
 main :: IO()
-main = 
-    putStrLn (maybe "erro" (printEpsilonNFA . regEx2EpsilonNFA) (parseRegEx "ab+" []))
+main =
+    putStrLn (maybe "erro" (printDFA . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
