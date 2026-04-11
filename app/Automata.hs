@@ -3,6 +3,7 @@ module Automata where
 import RegEx (RegEx (Literal, Seq, Union, Star), parseRegEx)
 
 import Data.List (nub, sort, elemIndex)
+import GHC.Integer (neqInteger)
 
 alphabet :: [Char]
 alphabet = ['A'..'z']
@@ -192,7 +193,7 @@ reachableStates (DFA _ dfa_trans dfa_start _) =
 removeUnreachableStates :: DFA -> DFA
 removeUnreachableStates dfa@(DFA _ dfa_trans _ dfa_final) =
     let
-        reachable = reachableStates dfa
+        reachable = filter (/= 0) . reachableStates $ dfa
     in
         DFA
         { states = length reachable + 1
