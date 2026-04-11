@@ -1,7 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module EpsilonRemoval
-    ( epsilonClosure
-    , removeEpsilon
+    ( EpsilonRemoval.epsilonClosure
+    , EpsilonRemoval.removeEpsilon
     ) where
 
 import Data.List (nub, sort)
@@ -44,11 +44,11 @@ removeEpsilon enfa@(EpsilonNFA n t s0 finalStates) = NFA
     --   2. aplica a transição 'a' em cada estado do fecho
     --   3. calcula o ε-fecho do resultado
     newTransition q c =
-        let closure   = epsilonClosure enfa [q]
+        let closure   = EpsilonRemoval.epsilonClosure enfa [q]
             reachable = concatMap (\r -> t r (Just c)) closure
-        in  epsilonClosure enfa reachable
+        in  EpsilonRemoval.epsilonClosure enfa reachable
 
     -- q é final se algum estado no seu ε-fecho era final no EpsilonNFA
     newFinalStates =
-        filter (\q -> any (`elem` finalStates) (epsilonClosure enfa [q]))
+        filter (\q -> any (`elem` finalStates) (EpsilonRemoval.epsilonClosure enfa [q]))
                [0 .. n - 1]

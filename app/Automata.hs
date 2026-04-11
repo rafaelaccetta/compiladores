@@ -2,7 +2,10 @@
 module Automata where
 import RegEx (RegEx (Literal, Seq, Union, Star), parseRegEx)
 
-import Data.List (nub, sort)
+import Data.List (nub, sort, elemIndex)
+
+alphabet :: [Char]
+alphabet = ['A'..'z']
 
 data DFA = DFA
     { states :: Int
@@ -25,8 +28,7 @@ data EpsilonNFA = EpsilonNFA
     , final :: [Int]
     }
 
-
-
+----------------------------------------------------------------
 
 regEx2EpsilonNFA :: RegEx -> EpsilonNFA
 
@@ -104,7 +106,7 @@ regEx2EpsilonNFA (Star r) =
         , final = [r_states + 1]
         }
 
-----------------------------------------------------------------------------------
+----------------------------------------------------------------
 
 -- | Retorna todos os estados alcançáveis a partir de 'initialStates'
 -- usando apenas transições epsilon (Nothing). O próprio estado está
@@ -152,7 +154,7 @@ removeEpsilon enfa@(EpsilonNFA n t s0 finalStates) = NFA
         filter (\q -> any (`elem` finalStates) (epsilonClosure enfa [q]))
                [0 .. n - 1]
 
-----------------------------------------------------------------------------------
+----------------------------------------------------------------
 
 toPowersOf2 :: Int -> [Int]
 toPowersOf2 0 = []
@@ -161,7 +163,7 @@ toPowersOf2 n = if n `rem` 2 == 1
     else map (+1) (toPowersOf2 (n `div` 2))
 
 fromPowersOf2 :: [Int] -> Int
-fromPowersOf2 = foldr (\ a -> (+) (2 ^ a)) 0 . nub
+fromPowersOf2 = foldl (\b a -> b + 2^a) 0
 
 nfa2DFA :: NFA -> DFA
 nfa2DFA (NFA nfa_states nfa_trans nfa_start nfa_final) =
@@ -172,6 +174,41 @@ nfa2DFA (NFA nfa_states nfa_trans nfa_start nfa_final) =
     , final = filter (any (`elem` nfa_final) . toPowersOf2) [1..2^nfa_states]
     }
 
+----------------------------------------------------------------
+
+reachableStates :: DFA -> [Int]
+reachableStates (DFA _ dfa_trans dfa_start _) =
+    let
+        dfs :: Int -> [Int] -> [Int]
+        dfs st ac =
+            if st `elem` ac then ac else
+                foldl
+                    (\l sy ->
+                        dfs (dfa_trans st sy) l
+                    ) (ac ++ [st]) alphabet
+    in
+        dfs dfa_start []
+
+removeUnreachableStates :: DFA -> DFA
+removeUnreachableStates dfa@(DFA _ dfa_trans _ dfa_final) =
+    let
+        reachable = reachableStates dfa
+    in
+        DFA
+        { states = length reachable + 1
+        , transition =
+            \st sy ->
+                if st < length reachable then
+                    case elemIndex (dfa_trans (reachable !! st) sy) reachable of
+                        Nothing -> length reachable
+                        Just x -> x
+                else length reachable
+        , start = 0
+        , final = filter (\idx -> (reachable !! idx) `elem` dfa_final) [0..(length reachable - 1)]
+        }
+
+----------------------------------------------------------------
+
 printEpsilonNFA :: EpsilonNFA -> String
 printEpsilonNFA (EpsilonNFA stts trans strt fnl) =
     "states: " ++ show stts ++ "\ntransition: \n" ++
@@ -179,8 +216,8 @@ printEpsilonNFA (EpsilonNFA stts trans strt fnl) =
             (\st ->
                 foldMap (\sy -> if null (trans st sy) then "" else
                     "(" ++ show st ++ ", " ++ maybe "ε" show sy ++ ") -> " ++ show (trans st sy) ++ "\n")
-                    (Nothing : map Just ['A'..'z']))
-            [0..stts]
+                    (Nothing : map Just alphabet))
+            [0..stts-1]
         ++ "start: " ++ show strt ++
         "\nfinal " ++ show fnl
 
@@ -191,23 +228,30 @@ printNFA (NFA stts trans strt fnl) =
             (\st ->
                 foldMap (\sy -> if null (trans st sy) then "" else
                     "(" ++ show st ++ ", " ++ show sy ++ ") -> " ++ show (trans st sy) ++ "\n")
-                    ['A'..'z'])
-            [0..stts]
+                    alphabet)
+            [0..stts-1]
         ++ "start: " ++ show strt ++
         "\nfinal " ++ show fnl
 
-printDFA :: DFA -> String
-printDFA (DFA stts trans strt fnl) =
+printDFA :: [Int] -> DFA -> String
+printDFA ignore (DFA stts trans strt fnl) =
     "states: " ++ show stts ++ "\ntransition: \n" ++
         foldMap
             (\st ->
-                foldMap (\sy -> if trans st sy == 0 then "" else
+                foldMap (\sy -> if trans st sy `elem` ignore then "" else
                     "(" ++ show st ++ ", " ++ show sy ++ ") -> " ++ show (trans st sy) ++ "\n")
-                    ['A'..'z'])
-            [0..stts]
+                    alphabet)
+            [0..stts-1]
         ++ "start: " ++ show strt ++
         "\nfinal " ++ show fnl
 
+getStates :: DFA -> Int
+getStates (DFA s _ _ _) = s
+
 main :: IO()
 main =
-    putStrLn (maybe "erro" (printDFA . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
+    putStrLn (maybe "erro" (printEpsilonNFA . regEx2EpsilonNFA) (parseRegEx "ab+" []))
+    >> putStrLn (maybe "erro" (printNFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
+    >> putStrLn (maybe "erro" (printDFA [0] . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
+    >> print (maybe [] (reachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
+    >> putStrLn (maybe "erro" ((\dfa -> printDFA [getStates dfa - 1] dfa) . removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
