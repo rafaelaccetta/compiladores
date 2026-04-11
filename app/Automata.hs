@@ -1,9 +1,8 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Automata where
-import RegEx (RegEx (Literal, Seq, Union, Star), parseRegEx)
 
+import RegEx (RegEx (Literal, Seq, Union, Star), parseRegEx)
 import Data.List (nub, sort, elemIndex)
-import GHC.Integer (neqInteger)
 
 alphabet :: [Char]
 alphabet = ['A'..'z']
