@@ -3,6 +3,7 @@ module Automata where
 
 import RegEx (RegEx (Literal, Seq, Union, Star), parseRegEx)
 import Data.List (nub, sort, elemIndex)
+import Data.Maybe (fromMaybe)
 
 alphabet :: [Char]
 alphabet = ['A'..'z']
@@ -192,18 +193,16 @@ reachableStates (DFA _ dfa_trans dfa_start _) =
 removeUnreachableStates :: DFA -> DFA
 removeUnreachableStates dfa@(DFA _ dfa_trans _ dfa_final) =
     let
-        reachable = filter (/= 0) . reachableStates $ dfa
+        reachable = 0 : filter (/= 0) (reachableStates dfa)
     in
         DFA
-        { states = length reachable + 1
+        { states = length reachable
         , transition =
             \st sy ->
                 if st < length reachable then
-                    case elemIndex (dfa_trans (reachable !! st) sy) reachable of
-                        Nothing -> length reachable
-                        Just x -> x
-                else length reachable
-        , start = 0
+                    fromMaybe 0 (elemIndex (dfa_trans (reachable !! st) sy) reachable)
+                else 0
+        , start = 1
         , final = filter (\idx -> (reachable !! idx) `elem` dfa_final) [0..(length reachable - 1)]
         }
 
@@ -254,4 +253,4 @@ main =
     >> putStrLn (maybe "erro" (printNFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
     >> putStrLn (maybe "erro" (printDFA [0] . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
     >> print (maybe [] (reachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
-    >> putStrLn (maybe "erro" ((\dfa -> printDFA [getStates dfa - 1] dfa) . removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
+    >> putStrLn (maybe "erro" (printDFA [0] . removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
