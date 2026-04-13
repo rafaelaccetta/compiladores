@@ -164,7 +164,7 @@ toPowersOf2 n = if n `rem` 2 == 1
     else map (+1) (toPowersOf2 (n `div` 2))
 
 fromPowersOf2 :: [Int] -> Int
-fromPowersOf2 = foldl (\b a -> b + 2^a) 0
+fromPowersOf2 = foldl (\b a -> b + 2^a) 0 . nub
 
 nfa2DFA :: NFA -> DFA
 nfa2DFA (NFA nfa_states nfa_trans nfa_start nfa_final) =
@@ -249,8 +249,9 @@ getStates (DFA s _ _ _) = s
 
 main :: IO()
 main =
-    putStrLn (maybe "erro" (printEpsilonNFA . regEx2EpsilonNFA) (parseRegEx "ab+" []))
-    >> putStrLn (maybe "erro" (printNFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
-    >> putStrLn (maybe "erro" (printDFA [0] . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
-    >> print (maybe [] (reachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
-    >> putStrLn (maybe "erro" (printDFA [0] . removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx "ab+" []))
+    let re = "a*" in
+    putStrLn (maybe "erro" (printEpsilonNFA . regEx2EpsilonNFA) (parseRegEx re))
+    >> putStrLn (maybe "erro" (printNFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))
+    >> putStrLn (maybe "erro" (printDFA [0] . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))
+    >> print (maybe [] (reachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))
+    >> putStrLn (maybe "erro" (printDFA [0] . removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))

@@ -5,14 +5,17 @@ data RegEx = Literal Char
     | Union RegEx RegEx
     | Star RegEx
 
-parseRegEx :: String -> [RegEx] -> Maybe RegEx
-parseRegEx "" [a] = Just a
-parseRegEx (';':as) (r1:r2:rs) = parseRegEx as (Seq r2 r1 : rs)
-parseRegEx ('+':as) (r1:r2:rs) = parseRegEx as (Union r2 r1 : rs)
-parseRegEx ('*':as) (r1:rs) = parseRegEx as (Star r1 : rs)
+parseRegExAux :: String -> [RegEx] -> Maybe RegEx
+parseRegExAux "" [a] = Just a
+parseRegExAux (';':as) (r1:r2:rs) = parseRegExAux as (Seq r2 r1 : rs)
+parseRegExAux ('+':as) (r1:r2:rs) = parseRegExAux as (Union r2 r1 : rs)
+parseRegExAux ('*':as) (r1:rs) = parseRegExAux as (Star r1 : rs)
 
-parseRegEx (a:as) rs = parseRegEx as (Literal a : rs)
-parseRegEx _ _ = Nothing
+parseRegExAux (a:as) rs = parseRegExAux as (Literal a : rs)
+parseRegExAux _ _ = Nothing
+
+parseRegEx :: String -> Maybe RegEx
+parseRegEx s = parseRegExAux s []
 
 printre :: RegEx -> String
 printre (Literal a) = [a]
@@ -23,4 +26,4 @@ printre (Star a)= "(" ++ printre a ++ ")" ++ "*"
 
 main :: IO ()
 main = putStrLn
-    (maybe "erro" printre (parseRegEx "ab;*a+*" []))
+    (maybe "erro" printre (parseRegEx "ab;*a+*"))
