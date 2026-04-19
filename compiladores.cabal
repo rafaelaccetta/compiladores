@@ -65,6 +65,7 @@ executable compiladores
                     Automata
                     EpsilonRemoval
                     RDFA
+                    Scanner
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

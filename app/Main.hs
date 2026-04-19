@@ -39,11 +39,11 @@ acceptsNFA (NFA _ t s0 fs) input = any (`elem` fs) (foldl step [s0] input)
 main :: IO ()
 main = do
     hSetEncoding stdout utf8
-    let nfa = removeEpsilon exampleENFA
+    let nfa = EpsilonRemoval.removeEpsilon exampleENFA
 
     putStrLn "=== ε-fecho de cada estado ==="
     mapM_ (\q -> putStrLn $ "  ε-fecho(" ++ show q ++ ") = "
-                           ++ show (epsilonClosure exampleENFA [q]))
+                           ++ show (EpsilonRemoval.epsilonClosure exampleENFA [q]))
           [0..3]
 
     putStrLn "\n=== Estados finais do NFA resultante ==="

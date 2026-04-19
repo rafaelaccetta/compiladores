@@ -208,6 +208,11 @@ removeUnreachableStates dfa@(DFA _ dfa_trans _ dfa_final) =
 
 ----------------------------------------------------------------
 
+regEx2DFA :: RegEx -> DFA
+regEx2DFA = removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA
+
+----------------------------------------------------------------
+
 printEpsilonNFA :: EpsilonNFA -> String
 printEpsilonNFA (EpsilonNFA stts trans strt fnl) =
     "states: " ++ show stts ++ "\ntransition: \n" ++

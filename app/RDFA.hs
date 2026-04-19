@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 module RDFA where
 
-import Automata (alphabet, DFA(DFA), removeUnreachableStates, nfa2DFA, removeEpsilon, regEx2EpsilonNFA, printDFA)
+import Automata (alphabet, DFA(DFA), removeUnreachableStates, nfa2DFA, removeEpsilon, regEx2EpsilonNFA)
 import RegEx (parseRegEx)
 
 data RDFA = RDFA
