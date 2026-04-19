@@ -6,7 +6,7 @@ import Data.List (nub, sort, elemIndex)
 import Data.Maybe (fromMaybe)
 
 alphabet :: [Char]
-alphabet = ['A'..'z']
+alphabet = [' ' .. '~']
 
 data DFA = DFA
     { states :: Int

@@ -1,6 +1,6 @@
 module Scanner where
 
-import RDFA (RDFA(RDFA), fromDFA, productRDFA)
+import RDFA (RDFA(RDFA), fromDFA, productRDFA, printRDFA)
 import Automata (regEx2DFA)
 import RegEx (parseRegEx)
 
@@ -14,12 +14,15 @@ scanAux rdfa@(RDFA _ trans strt fnl) str acc word state =
     case str of
         [] -> case fnl state of
             Nothing -> Left ("Couldn't match string: " ++ word)
-            Just token -> Right (acc ++ [(token, word)])
+            Just token -> Right (acc ++ (if word == "" then [] else [(token, word)]))
         a:as -> 
             if a `elem` delimiters 
             then case fnl state of
                 Nothing -> Left ("Couldn't match string: " ++ word)
-                Just token -> scanAux rdfa (dropWhile (`elem` whitespace) str) (acc ++ [(token, word)]) "" strt
+                Just token -> 
+                    case dropWhile (`elem` whitespace) str of
+                        [] -> Right (acc ++ (if word == "" then [] else [(token, word)]))
+                        b:bs -> scanAux rdfa bs (acc ++ (if word == "" then [] else [(token, word)])) [b] (trans strt b)
             else 
                 scanAux rdfa as acc (word ++ [a]) (trans state a)
 
@@ -42,6 +45,6 @@ createScanner ((re, t):res) =
 
 main :: IO()
 main = 
-    case createScanner [("a*", "a*"), ("bb;", "bb;")] of
+    case createScanner [("a*", "a*"), (")", ")")] of
         Nothing -> print "erro"
-        Just rdfa -> print (scan rdfa "aaa bb aac")
+        Just rdfa -> putStrLn (printRDFA [[0,0]] rdfa)>>print (scan rdfa "a) aa")
