@@ -66,6 +66,8 @@ executable compiladores
                     EpsilonRemoval
                     RDFA
                     Scanner
+                    RacketLexer
+                    RacketParser
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
