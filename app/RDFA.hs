@@ -43,8 +43,8 @@ allStates (0:_) = []
 allStates (n:as) = map (n-1 :) (allStates as) ++ allStates (n-1:as)
 
 
-reachableStates_ :: RDFA -> [[Int]]
-reachableStates_ (RDFA _ rdfa_trans rdfa_start _) =
+reachableStates :: RDFA -> [[Int]]
+reachableStates (RDFA _ rdfa_trans rdfa_start _) =
     let
         dfs :: [Int] -> [[Int]] -> [[Int]]
         dfs st ac =
@@ -58,15 +58,15 @@ reachableStates_ (RDFA _ rdfa_trans rdfa_start _) =
 
 
 -- TROCAR PARA IMPRIMIR APENAS ESTADOS ACESSÍVEIS COM DFS?
-printRDFA :: [[Int]] -> RDFA -> String
-printRDFA ignore rdfa@(RDFA stts trans strt fnl) =
+printRDFA :: RDFA -> String
+printRDFA rdfa@(RDFA stts trans strt fnl) =
     "states: " ++ show stts ++ "\ntransition: \n" ++
         foldMap
             (\st ->
-                foldMap (\sy -> if trans st sy `elem` ignore then "" else
+                foldMap (\sy -> if trans st sy == map (\_ -> 0) stts then "" else
                     "(" ++ show st ++ ", " ++ show sy ++ ") -> " ++ show (trans st sy) ++ "\n")
                     alphabet)
-            (reachableStates_ rdfa)
+            (reachableStates rdfa)
         ++ "start: " ++ show strt ++
         "\nfinal:\n" ++ 
         foldMap
@@ -79,9 +79,9 @@ main :: IO()
 main = 
     case (parseRegEx "ab+c;", parseRegEx "ac;b+") of
         (Just a1, Just a2) ->
-            putStrLn (printRDFA [[0]] (fromDFA "1". removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA $ a1))
-            >> putStrLn (printRDFA [[0]] (fromDFA "2". removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA $ a2))
-            >> putStrLn (printRDFA [[0,0]] 
+            putStrLn (printRDFA (fromDFA "1". removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA $ a1))
+            >> putStrLn (printRDFA (fromDFA "2". removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA $ a2))
+            >> putStrLn (printRDFA 
                 (productRDFA
                     (fromDFA "1". removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA $ a1)
                     (fromDFA "2". removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA $ a2)))

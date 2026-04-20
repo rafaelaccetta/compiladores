@@ -1,14 +1,18 @@
 {-# LANGUAGE LambdaCase #-}
-module Scanner where
+module Out where
 
-import System.Environment (getArgs)
+import System.Environment
 
-import RDFA (RDFA(RDFA), fromDFA, productRDFA, printRDFA)
-import Automata (regEx2DFA)
-import RegEx (parseRegEx)
+data RDFA = RDFA
+    { states :: [Int]
+    , transition :: [Int] -> Char -> [Int]
+    , start :: [Int]
+    , isFinal :: [Int] -> Maybe String
+    }
 
 delimiters :: [Char]
 delimiters = [' ', '\n', '\t', ';', '(', ')']
+
 whitespace :: [Char]
 whitespace = [' ', '\n', '\t']
 
@@ -36,26 +40,26 @@ scan :: RDFA -> String -> Either String [(String, String)]
 scan rdfa@(RDFA _ _ strt _) str = 
     scanAux rdfa str [] "" strt
 
+tran :: [Int] -> Char -> [Int]
+tran [1,1,1] '(' = [0,2,0]
+tran [1,1,1] ')' = [0,0,2]
+tran [1,1,1] 'a' = [2,0,0]
+tran [2,0,0] 'b' = [3,0,0]
+tran [3,0,0] 'a' = [2,0,0]
+tran _ _ = [0,0,0]
 
-createScanner :: [(String, String)] -> Maybe RDFA
-createScanner [] = Nothing
-createScanner [(re, t)] =
-    case parseRegEx re of
-        Nothing -> Nothing
-        Just regex -> Just (fromDFA t (regEx2DFA regex))
-createScanner ((re, t):res) =
-    case (parseRegEx re, createScanner res) of
-        (Just regex, Just rdfa) -> Just (productRDFA (fromDFA t (regEx2DFA regex)) rdfa)
-        _ -> Nothing
+final :: [Int] -> Maybe String
+final [1,1,1] = Just "<1>"
+final [0,2,0] = Just "<2>"
+final [0,0,2] = Just "<3>"
+final [3,0,0] = Just "<1>"
+final _ = Nothing
 
-toPairs :: [String] -> [(String, String)]
-toPairs (a:b:as) = (a, b) : toPairs as
-toPairs _ = []
+rdfa :: RDFA
+rdfa = RDFA [4,3,3] tran [1,1,1]final
 
-main :: IO()
-main = getArgs >>= \case
-    [file] -> toPairs . lines <$> readFile file >>= \regexes ->
-        case createScanner regexes of
-            Nothing -> print "erro"
-            Just rdfa -> putStrLn (printRDFA rdfa) >> print (scan rdfa "( ( abab ) )")
+main :: IO ()
+
+main  = getArgs >>= \case
+    [file] -> readFile file >>= \text -> print (scan rdfa text)
     _ -> print "Program must be run with 1 filepath as argument."
