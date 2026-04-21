@@ -7,6 +7,8 @@ data RegEx = Literal Char
 
 parseRegExAux :: String -> [RegEx] -> Maybe RegEx
 parseRegExAux "" [a] = Just a
+
+parseRegExAux ('\\':a:as) rs = parseRegExAux as (Literal a : rs)
 parseRegExAux (';':as) (r1:r2:rs) = parseRegExAux as (Seq r2 r1 : rs)
 parseRegExAux ('+':as) (r1:r2:rs) = parseRegExAux as (Union r2 r1 : rs)
 parseRegExAux ('*':as) (r1:rs) = parseRegExAux as (Star r1 : rs)
@@ -26,4 +28,4 @@ printre (Star a)= "(" ++ printre a ++ ")" ++ "*"
 
 main :: IO ()
 main = putStrLn
-    (maybe "erro" printre (parseRegEx "ab;*a+*"))
+    (maybe "erro" printre (parseRegEx "\\;\\*+"))
