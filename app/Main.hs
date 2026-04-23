@@ -32,7 +32,7 @@ createOutput rdfa@(RDFA rdfa_states rdfa_trans rdfa_start rdfa_final) =
             >> appendFile "Out.hs" "\n\nscanner_rdfa :: RDFA"
             >> appendFile "Out.hs" ("\nscanner_rdfa = RDFA " ++ show rdfa_states ++ " tran " ++ show rdfa_start ++ "final")
             >> appendFile "Out.hs" "\n\nmain :: IO ()"
-            >> appendFile "Out.hs" "\n\nmain  = getArgs >>= \\case\n    [file] -> readFile file >>= \\text -> print (scan scanner_rdfa text)\n    _ -> print \"Program must be run with 1 filepath as argument.\""
+            >> appendFile "Out.hs" "\nmain  = getArgs >>= \\case\n    [file] -> readFile file >>= \\text -> print (scan scanner_rdfa text)\n    _ -> print \"Program must be run with 1 filepath as argument.\""
 
 main :: IO ()
 main = getArgs >>= \case
