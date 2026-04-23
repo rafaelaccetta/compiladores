@@ -10,6 +10,37 @@ top-level-form-rep -> ε
 module-level-form-rep -> module-level-form module-level-form-rep
 module-level-form-rep -> ε
 
+module-path -> root-module-path
+module-path -> ( submod root-module-path submod-path-element-rep )
+module-path -> ( submod "." submod-path-element-rep )
+module-path -> ( submod ".." submod-path-element-rep )
+
+submod-path-element-rep -> submod-path-element submod-path-element-rep
+submod-path-element-rep -> ε
+
+submod-path-element -> id
+submod-path-element -> ".."
+
+root-module-path -> ( quote id )
+root-module-path -> rel-string
+root-module-path -> id
+root-module-path -> ( file string )
+root-module-path -> ( planet id )
+root-module-path -> ( planet string )
+root-module-path -> ( planet rel-string ( user-string pkg-string vers ) rel-string-rep )
+
+vers -> nat
+vers -> nat minor-vers
+
+minor-vers -> nat
+minor-vers -> ( nat nat )
+minor-vers -> ( = nat )
+minor-vers -> ( + nat )
+minor-vers -> ( - nat )
+
+rel-string-rep -> rel-string rel-string-rep
+rel-string-rep -> ε
+
 module-level-form -> general-top-level-form
 module-level-form -> ( #%provide raw-provide-spec-rep )
 module-level-form -> ( begin-for-syntax module-level-form-rep )
@@ -34,29 +65,98 @@ general-top-level-form -> ( #%require raw-require-spec-rep )
 raw-require-spec-rep -> raw-require-spec raw-require-spec-rep
 raw-require-spec-rep -> ε
 
+raw-provide-spec -> phaseless-spec
+raw-provide-spec -> ( for-meta phase-level phaseless-spec-rep )
+raw-provide-spec -> ( for-syntax phaseless-spec-rep )
+raw-provide-spec -> ( for-label phaseless-spec-rep )
+raw-provide-spec -> ( protect raw-provide-spec-rep )
+
+phaseless-spec-rep -> phaseless-spec phaseless-spec-rep
+phaseless-spec-rep -> ε
+
+phase-level -> exact-integer
+phase-level -> #f
+
+phaseless-spec -> spaceless-spec
+phaseless-spec -> ( for-space space spaceless-spec-rep )
+phaseless-spec -> ( protect phaseless-spec-rep )
+
+spaceless-spec-rep -> spaceless-spec spaceless-spec-rep
+spaceless-spec-rep -> ε
+
+space -> id
+space -> #f
+
+spaceless-spec -> id
+spaceless-spec -> ( rename local-id export-id )
+spaceless-spec -> ( struct struct-id ( field-id-rep ) )
+spaceless-spec -> ( all-from raw-module-path )
+spaceless-spec -> ( all-from-except raw-module-path id-rep )
+spaceless-spec -> ( all-defined )
+spaceless-spec -> ( all-defined-except id-rep )
+spaceless-spec -> ( prefix-all-defined prefix-id )
+spaceless-spec -> ( prefix-all-defined-except prefix-id id-rep )
+spaceless-spec -> ( protect spaceless-spec-rep )
+spaceless-spec -> (expand (id . datum ) )
+spaceless-spec -> (expand (id . datum ) orig-form )
+
+field-id-rep -> field-id field-id-rep
+field-id-rep -> ε
+
+raw-module-path -> raw-root-module-path
+raw-module-path -> ( submod raw-root-module-path id id-rep )
+raw-module-path -> ( submod "." id id-rep )
+
+raw-root-module-path -> ( quote id )
+raw-root-module-path -> rel-string
+raw-root-module-path -> ( lib rel-string-rep )
+raw-root-module-path -> id
+raw-root-module-path -> ( file string )
+raw-root-module-path -> ( planet rel-string ( user-string pkg-string vers-rep ) )
+raw-root-module-path -> literal-path
+
+raw-require-spec -> phaseless-spec
+raw-require-spec -> ( for-meta phase-level raw-require-spec-rep )
+raw-require-spec -> ( for-syntax raw-require-spec-rep )
+raw-require-spec -> ( for-template raw-require-spec-rep )
+raw-require-spec -> ( for-label raw-require-spec-rep )
+raw-require-spec -> ( just-meta phase-level raw-require-spec-rep )
+raw-require-spec -> ( portal portal-id content )
+
+declaration-keyword -> #:cross-phase-persistent
+declaration-keyword -> #:empty-namespace
+declaration-keyword -> #:require=define
+declaration-keyword -> #:flatten-requires
+declaration-keyword -> #:unlimited-compile
+declaration-keyword -> #:unsafe
+declaration-keyword -> #:realm identifier
+
 expr -> id
-expr -> ( #%plain-lambda formals expr-rep + )
+expr -> ( #%plain-lambda formals expr expr-rep )
 expr -> ( case-lambda formals-expr-rep )
 expr -> ( if expr expr expr )
-expr -> ( begin expr-rep + )
+expr -> ( begin expr expr-rep )
 expr -> ( begin0 expr expr-rep )
-expr -> ( let-values ( id-expr-rep ) expr-rep + )
-expr -> ( letrec-values ( id-expr-rep ) expr-rep + )
+expr -> ( let-values ( id-expr-rep ) expr expr-rep )
+expr -> ( letrec-values ( id-expr-rep ) expr expr-rep )
 expr -> ( set! id expr )
 expr -> ( quote datum )
 expr -> ( quote-syntax datum )
 expr -> ( quote-syntax datum #:local )
 expr -> ( with-continuation-mark expr expr expr )
-expr -> ( #%plain-app expr-rep + )
+expr -> ( #%plain-app expr expr-rep )
 expr -> ( #%top . id )
 expr -> ( #%variable-reference id )
 expr -> ( #%variable-reference ( #%top . id ) )
 expr -> ( #%variable-reference )
 
+expr-rep -> expr-rep expr-rep
+expr-rep -> ε
+
 formals-expr-rep -> formals-expr formals-expr-rep
 formals-expr-rep -> ε
 
-formals-expr -> ( formals expr-rep + )
+formals-expr -> ( formals expr expr-rep )
 
 id-expr-rep -> id-expr id-expr-rep
 id-expr-rep -> ε
@@ -64,8 +164,8 @@ id-expr-rep -> ε
 id-expr -> [ ( id-rep ) expr ]
 
 id-rep -> id id-rep
-id -> oqueeucolocoaqui
 
 formals -> ( id-rep )
-formals -> ( id-rep + . id )
+formals -> ( id id-rep . id )
 formals -> id
+
