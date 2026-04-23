@@ -28,4 +28,4 @@ printre (Star a)= "(" ++ printre a ++ ")" ++ "*"
 
 main :: IO ()
 main = putStrLn
-    (maybe "erro" printre (parseRegEx "\\;\\*+"))
+    (maybe "erro" printre (parseRegEx "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+++++++++++++++++++++++++++++++++++++++++++++++++++abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*;"))

@@ -172,8 +172,18 @@ nfa2DFA (NFA nfa_states nfa_trans nfa_start nfa_final) =
     { states = 2 ^ nfa_states
     , transition = \st sy -> fromPowersOf2 (concatMap (`nfa_trans` sy) (toPowersOf2 st))
     , start = 2 ^ nfa_start
-    , final = filter (any (`elem` nfa_final) . toPowersOf2) [1..2^nfa_states]
+    , final = filter (any (`elem` nfa_final) . toPowersOf2) accessible
     }
+    where
+        dfs :: Int -> [Int] -> [Int]
+        dfs st ac =
+            if st `elem` ac then ac else
+                foldl
+                    (\l sy -> dfs (fromPowersOf2 (concatMap (`nfa_trans` sy) (toPowersOf2 st))) l)
+                    (ac ++ [st]) alphabet
+
+        accessible :: [Int]
+        accessible = dfs (2 ^ nfa_start) []
 
 ----------------------------------------------------------------
 
@@ -208,6 +218,7 @@ removeUnreachableStates dfa@(DFA _ dfa_trans _ dfa_final) =
 
 ----------------------------------------------------------------
 
+----------------------------------------------------------------
 regEx2DFA :: RegEx -> DFA
 regEx2DFA = removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA
 
@@ -238,14 +249,14 @@ printNFA (NFA stts trans strt fnl) =
         "\nfinal " ++ show fnl
 
 printDFA :: [Int] -> DFA -> String
-printDFA ignore (DFA stts trans strt fnl) =
-    "states: " ++ show stts ++ "\ntransition: \n" ++
-        foldMap
+printDFA ignore dfa@(DFA stts trans strt fnl) =
+    "states: " ++ show stts ++ "\ntransition: \n" 
+        ++ foldMap
             (\st ->
                 foldMap (\sy -> if trans st sy `elem` ignore then "" else
                     "(" ++ show st ++ ", " ++ show sy ++ ") -> " ++ show (trans st sy) ++ "\n")
                     alphabet)
-            [0..stts-1]
+            (reachableStates dfa)
         ++ "start: " ++ show strt ++
         "\nfinal " ++ show fnl
 
@@ -254,9 +265,9 @@ getStates (DFA s _ _ _) = s
 
 main :: IO()
 main =
-    let re = "a*" in
-    putStrLn (maybe "erro" (printEpsilonNFA . regEx2EpsilonNFA) (parseRegEx re))
-    >> putStrLn (maybe "erro" (printNFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))
-    >> putStrLn (maybe "erro" (printDFA [0] . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))
-    >> print (maybe [] (reachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))
-    >> putStrLn (maybe "erro" (printDFA [0] . removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))
+    let re = "abcd+++abcd0123+++++++*;" in
+--    putStrLn (maybe "erro" (printEpsilonNFA . regEx2EpsilonNFA) (parseRegEx re))
+--    putStrLn (maybe "erro" (printNFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))
+--    putStrLn (maybe "erro" (printDFA [0] . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))
+--    >> print (maybe [] (reachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))
+    putStrLn (maybe "erro" (printDFA [0] . removeUnreachableStates . nfa2DFA . removeEpsilon . regEx2EpsilonNFA) (parseRegEx re))

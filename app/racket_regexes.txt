@@ -24,7 +24,7 @@ define-syntaxes;;;;;;;;;;;;;;
 define-syntaxes
 #%require;;;;;;;;
 #%require
-#%plain-lambda;;;;;;;;;;;;;;
+#%plain-lambda;;;;;;;;;;;;;
 #%plain-lambda
 case-lambda;;;;;;;;;;
 case-lambda
@@ -40,8 +40,8 @@ set!;;;
 set!
 quote;;;;
 quote
-quote-syntax
 quote-syntax;;;;;;;;;;;
+quote-syntax
 #:local;;;;;;
 #:local
 with-continuation-mark;;;;;;;;;;;;;;;;;;;;;
@@ -54,5 +54,5 @@ with-continuation-mark
 .
 #%variable-reference;;;;;;;;;;;;;;;;;;;
 #%variable-reference
-
+a1*;
 id
