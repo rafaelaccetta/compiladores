@@ -522,11 +522,25 @@ erroTokenInesperado naoTerminal token =
        else "Erro de sintaxe: " ++ tkFriendly ++ " não é válido aqui. Esperava " ++ ntFriendly ++ " (" ++ listaFirst ++ ")."
 
 -- Caso 3: terminal esperado não confere com token atual
+-- Keywords internos que não devem aparecer em mensagens de erro ao usuário
+ehKeywordInterno :: String -> Bool
+ehKeywordInterno t = t `elem` ["#%plain-lambda", "case-lambda", "if", "begin", "begin0",
+    "let-values", "letrec-values", "set!", "quote", "quote-syntax", "with-continuation-mark",
+    "#%plain-app", "#%top", "#%variable-reference", "#%expression", "module", "module*",
+    "#%plain-module-begin", "begin-for-syntax", "define-values", "define-syntaxes", "#%require",
+    "#%provide", "#%declare"]
+
 erroTerminalEsperado :: String -> String -> String
-erroTerminalEsperado esperado encontrado =
-    let espFriendly  = nomeFriendlyToken esperado
-        encFriendly  = nomeFriendlyToken encontrado
-    in "Erro de sintaxe: esperava " ++ espFriendly ++ " mas encontrou " ++ encFriendly ++ "."
+erroTerminalEsperado esperado encontrado
+    -- Keyword interno esperado mas encontrou ) → expressão incompleta
+    | ehKeywordInterno esperado && encontrado == ")" =
+        "Erro de sintaxe: expressão incompleta. ')' encontrado onde era esperada uma expressão."
+    | ehKeywordInterno esperado && encontrado == "]" =
+        "Erro de sintaxe: expressão incompleta. ']' encontrado onde era esperada uma expressão."
+    | otherwise =
+        let espFriendly = nomeFriendlyToken esperado
+            encFriendly = nomeFriendlyToken encontrado
+        in "Erro de sintaxe: esperava " ++ espFriendly ++ " mas encontrou " ++ encFriendly ++ "."
 
 -- Caso 4: tokens sobrando após expressão completa
 erroTokensSobrando :: String -> String
@@ -537,6 +551,35 @@ erroTokensSobrando token =
 erroFimInesperado :: String -> String
 erroFimInesperado naoTerminal =
     "Erro de sintaxe: fim de arquivo inesperado. Esperava " ++ nomeFriendlyNT naoTerminal ++ "."
+
+-- Conta quantos tokens são consumidos antes de falhar (para escolher a melhor produção em caso de erro)
+parseAuxTokensConsumed :: [(String, String)] -> [Either String String] -> Int
+parseAuxTokensConsumed []        []           = maxBound
+parseAuxTokensConsumed _         []           = maxBound
+parseAuxTokensConsumed []        _            = 0
+parseAuxTokensConsumed ((a1,_):as) ((Right q):qs)
+    | a1 == q   = let n = parseAuxTokensConsumed as qs
+                  in if n == maxBound then maxBound else 1 + n
+    | otherwise = 0
+parseAuxTokensConsumed ts@((a1,_):_) ((Left q):qs) =
+    case tabela q a1 of
+        [] -> 0
+        rs -> maximum (map (\r -> parseAuxTokensConsumed ts (r ++ qs)) rs)
+
+-- Versão segura para backtracking: retorna Nothing em vez de lançar erro
+parseAuxSafe :: [(String, String)] -> [Either String String] -> Maybe [Either (String, Int) (String, String)]
+parseAuxSafe [] [] = Just []
+parseAuxSafe [] _ = Nothing
+parseAuxSafe (_:_) [] = Nothing
+parseAuxSafe ((a1, a2):as) ((Right q):qs) =
+    if a1 /= q then Nothing
+    else case parseAuxSafe as qs of
+        Nothing -> Nothing
+        Just l  -> Just (Right (a1, a2) : l)
+parseAuxSafe ((a1, a2):as) ((Left q):qs) =
+    case find (\r -> isJust (parseAuxSafe ((a1, a2):as) (r ++ qs))) (tabela q a1) of
+        Nothing -> Nothing
+        Just r  -> Just (Left (q, length r) : fromJust (parseAuxSafe ((a1, a2):as) (r ++ qs)))
 
 parseAux :: [(String, String)] -> [Either String String] -> Maybe [Either (String, Int) (String, String)]
 parseAux [] [] = Just []
@@ -552,10 +595,17 @@ parseAux ((a1, a2):as) ((Right q):qs) =
         Nothing -> Nothing
         Just l -> Just (Right (a1, a2) : l)
 parseAux ((a1, a2):as) ((Left q):qs) =
-    case find (\r -> isJust (parseAux ((a1, a2):as) (r ++ qs))) (tabela q a1) of
-        -- Caso 1 ou Caso 2: sem produção na tabela
-        Nothing -> error (erroTabela q a1)
-        Just r -> Just (Left (q, length r) : fromJust (parseAux ((a1, a2):as) (r ++ qs)))
+    let prods = tabela q a1
+    in case prods of
+        [] -> error (erroTabela q a1)
+        _  -> case find (\r -> isJust (parseAuxSafe ((a1, a2):as) (r ++ qs))) prods of
+            Just r  -> Just (Left (q, length r) : fromJust (parseAux ((a1, a2):as) (r ++ qs)))
+            -- Nenhuma produção parseia a entrada completa: escolhe a que vai mais fundo antes de falhar
+            -- Em caso de empate, prefere a PRIMEIRA produção (preserva ordem da tabela)
+            Nothing ->
+                let depth r = parseAuxTokensConsumed ((a1, a2):as) (r ++ qs)
+                    r = foldl1 (\best cand -> if depth cand > depth best then cand else best) prods
+                in Just (Left (q, length r) : fromJust (parseAux ((a1, a2):as) (r ++ qs)))
 
 parse :: [(String, String)] -> Maybe [Either (String, Int) (String, String)]
 parse = \a -> parseAux a [Left "top-level-form"]

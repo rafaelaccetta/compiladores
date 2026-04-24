@@ -7,6 +7,12 @@ import Control.Exception
 runTeste :: IO () -> IO ()
 runTeste t = catch t (\e -> putStrLn ("  " ++ show (e :: SomeException)))
 
+parsePrint :: [(String, String)] -> IO ()
+parsePrint tokens = do
+    let result = show (parse tokens)
+    _ <- evaluate (length result)
+    putStrLn result
+
 
 
 
@@ -38,7 +44,7 @@ contaEspacosVazios = length [ (nt, t) | nt <- naoTerminais, t <- terminais, tabe
 teste1 :: IO ()
 teste1 = do
   let tokens = [("(", "("), (")", ")")]
-  print $ parse tokens
+  parsePrint tokens
 
 -- Teste válido: apenas um id
 -- Input : x
@@ -46,7 +52,7 @@ teste1 = do
 teste2 :: IO ()
 teste2 = do
   let tokens = [("id", "x")]
-  print $ parse tokens
+  parsePrint tokens
 
 -- Teste 3: parser real - (quote )
 -- Input : ( quote )
@@ -55,7 +61,7 @@ teste2 = do
 teste3 :: IO ()
 teste3 = do
   let tokens = [("(", "("), ("quote", "quote"), (")", ")")]
-  print $ parse tokens
+  parsePrint tokens
 
 -- Teste 4: parser real - (quote-syntax )
 -- Input : ( quote-syntax )
@@ -65,7 +71,7 @@ teste3 = do
 teste4 :: IO ()
 teste4 = do
   let tokens = [("(", "("), ("quote-syntax", "quote-syntax"), (")", ")")]
-  print $ parse tokens
+  parsePrint tokens
 
 -- Teste 5: erroTabela direto para module-path
 -- Input seria: ( module id ( ... ) ) com module-path faltando
@@ -102,7 +108,7 @@ teste7 = putStrLn (erroTabela "declaration-keyword" ")")
 teste8 :: IO ()
 teste8 = do
   let tokens = [("(","("), ("let-values","let-values"), ("(","("), (")",")" ), ("id","x"), (")",")" )]
-  print $ parse tokens
+  parsePrint tokens
 
 -- Teste 9: erroTabela direto para top-level-form
 -- Transição tentada: tabela "top-level-form" ")" → [] (vazio)
@@ -179,16 +185,16 @@ main = do
 teste13 :: IO ()
 teste13 = do
   let tokens = [("(","("), ("quote","quote"), ("[","["), (")",")" )]
-  print $ parse tokens
+  parsePrint tokens
 
--- Teste 14 (Caso 3): terminal esperado não confere com token atual
+-- Teste 14 (Caso 1/2): ']' não tem produção em expr-rep
 -- Input : ( begin x ]   (] no lugar de ))
--- Transição: parser vai até o final esperando ")" mas encontra "]"
--- Mensagem: "Erro de sintaxe: esperava ')' mas encontrou ']'."
+-- Transição tentada: tabela "expr-rep" "]" → [] (vazio)
+-- ']' não está no FOLLOW de expr-rep → token inesperado no contexto
 teste14 :: IO ()
 teste14 = do
   let tokens = [("(","("), ("begin","begin"), ("id","x"), ("]","]")]
-  print $ parse tokens
+  parsePrint tokens
 
 -- Teste 15 (Caso 4): tokens sobrando após expressão completa
 -- Input : x y   (dois ids, mas grammar só aceita um top-level-form)
@@ -197,7 +203,7 @@ teste14 = do
 teste15 :: IO ()
 teste15 = do
   let tokens = [("id","x"), ("id","y")]
-  print $ parse tokens
+  parsePrint tokens
 
 -- Teste 16 (Caso 5): fim de arquivo inesperado
 -- Input : ( if x y   (faltando o else e o fechamento)
@@ -205,7 +211,7 @@ teste15 = do
 teste16 :: IO ()
 teste16 = do
   let tokens = [("(","("), ("if","if"), ("id","x"), ("id","y")]
-  print $ parse tokens
+  parsePrint tokens
 
 mainComCasos :: IO ()
 mainComCasos = do
