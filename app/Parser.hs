@@ -445,9 +445,24 @@ parseAux _ _ = Nothing
 parse :: [(String, String)] -> Maybe [Either (String, Int) (String, String)]
 parse = \a -> parseAux a [Left "top-level-form"]
 
+data Tree = Terminal (String, String) | NonTerminal String [Tree] deriving Show
+
+toTreeAux :: [Either (String, Int) (String, String)] -> [Tree] -> Maybe Tree
+toTreeAux [] [t] = Just t
+toTreeAux ((Left (nt, n)) : ls) q = toTreeAux ls (NonTerminal nt (take n q) : drop n q)
+toTreeAux ((Right tkn) : ls) q = toTreeAux ls (Terminal tkn : q)
+toTreeAux _ _ = Nothing
+
+toTree :: [Either (String, Int) (String, String)] -> Maybe Tree
+toTree l = toTreeAux (reverse l) []
+
+
 main :: IO ()
-main  = getArgs >> case ["teste.txt"] of
-    [file] -> readFile file >>= \text -> case (scan scanner_rdfa "(if a1 a11 a111)") of
+main  = getArgs >>= \case 
+    [file] -> readFile file >>= \text -> case (scan scanner_rdfa text) of
         Left e -> print e
-        Right r -> print r >> print (parse r)
+        Right r -> print r
+            >> case (parse r) of
+                    Nothing -> print "erro"
+                    Just t -> print (toTree t)
     _ -> print "Program must be run with 1 filepath as argument."
