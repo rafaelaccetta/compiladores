@@ -1,3 +1,4 @@
+
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 module Parser where
@@ -18,6 +19,85 @@ delimiters = [' ', '\n', '\t', ';', '(', ')']
 
 whitespace :: [Char]
 whitespace = [' ', '\n', '\t']
+
+-- Mapeamento dos conjuntos FOLLOW para cada não-terminal
+followSet :: String -> [String]
+followSet "top-level-form" = ["$", ",", ")"]
+followSet "module-level-form-rep" = [")"]
+followSet "top-level-form-rep" = [")"]
+followSet "module-level-form" = ["(", ")", "id"]
+followSet "raw-provide-spec-rep" = [")"]
+followSet "declaration-keyword-rep" = [")"]
+followSet "submodule-form" = ["(", ")", "id"]
+followSet "general-top-level-form" = ["$", "(", ")", "id"]
+followSet "id-rep" = [")", "."]
+followSet "expr" = ["$", "(", ")", "id", "]"]
+followSet "expr-rep" = [")"]
+followSet "formals-expr-rep" = [")"]
+followSet "formals-expr" = [")", "("]
+followSet "id-expr-rep" = [")"]
+followSet "formals" = ["(", "id"]
+followSet "module-path" = ["("]
+followSet "raw-provide-spec" = ["id", ")"]
+followSet "datum" = [")", "#:local"]
+followSet "declaration-keyword" = ["id", ")"]
+followSet _ = []
+
+-- Função para listar possíveis terminais que podem ser gerados por um não-terminal
+possiveisGerados :: String -> [String]
+possiveisGerados nt = nub $ concatMap (mapMaybe getTerminal) $ concat [tabela nt t | t <- allTokens]
+    where
+        getTerminal (Right t) = Just t
+        getTerminal _ = Nothing
+        -- Lista de todos os tokens possíveis usados na tabela
+        allTokens = ["(", ")", "id", ".", "[", "]", "#%expression", "module", "module*", "#%plain-module-begin", "begin", "begin-for-syntax", "#%provide", "#%declare", "define-values", "define-syntaxes", "#%require", "#%plain-lambda", "case-lambda", "if", "begin0", "let-values", "letrec-values", "set!", "quote", "quote-syntax", "#:local", "with-continuation-mark", "#%plain-app", "#%top", "#%variable-reference", "raw-require-spec-rep", "declaration-keyword-rep", "raw-provide-spec-rep", "module-level-form-rep", "top-level-form-rep", "id-rep", "formals-expr-rep", "formals-expr", "id-expr-rep", "formals", "module-path", "raw-provide-spec", "datum", "declaration-keyword", "$" ]
+
+-- Tradução de não-terminais para linguagem amigável
+nomeFriendlyNT :: String -> String
+nomeFriendlyNT "expr"                  = "uma expressão"
+nomeFriendlyNT "expr-rep"              = "expressões adicionais"
+nomeFriendlyNT "datum"                 = "um identificador ou valor"
+nomeFriendlyNT "id-rep"                = "uma lista de identificadores"
+nomeFriendlyNT "formals"               = "parâmetros formais"
+nomeFriendlyNT "formals-expr"          = "uma cláusula de case-lambda"
+nomeFriendlyNT "formals-expr-rep"      = "cláusulas de case-lambda"
+nomeFriendlyNT "id-expr-rep"           = "ligações de variáveis"
+nomeFriendlyNT "module-path"           = "um nome de módulo"
+nomeFriendlyNT "raw-provide-spec"      = "um identificador para exportar"
+nomeFriendlyNT "declaration-keyword"   = "uma palavra-chave de declaração"
+nomeFriendlyNT "general-top-level-form"= "uma definição ou expressão"
+nomeFriendlyNT "top-level-form"        = "uma definição ou expressão de nível superior"
+nomeFriendlyNT "top-level-form-rep"    = "mais definições ou expressões"
+nomeFriendlyNT "module-level-form"     = "uma definição de módulo"
+nomeFriendlyNT "module-level-form-rep" = "mais definições de módulo"
+nomeFriendlyNT "submodule-form"        = "um submódulo"
+nomeFriendlyNT nt                      = nt
+
+-- Tradução de tokens para linguagem amigável
+nomeFriendlyToken :: String -> String
+nomeFriendlyToken "id"  = "identificador"
+nomeFriendlyToken "("   = "'('"
+nomeFriendlyToken ")"   = "')'"
+nomeFriendlyToken "."   = "'.'"
+nomeFriendlyToken "["   = "'['"
+nomeFriendlyToken "]"   = "']'"
+nomeFriendlyToken "$"   = "fim de arquivo"
+nomeFriendlyToken t     = "'" ++ t ++ "'"
+
+-- Função de erro para tabela first-follow
+erroTabela :: String -> String -> String
+erroTabela naoTerminal token =
+    let follow    = followSet naoTerminal
+        possiveis = possiveisGerados naoTerminal
+        tkFriendly = nomeFriendlyToken token
+        ntFriendly = nomeFriendlyNT naoTerminal
+        listaPossiveis = intercalate " ou " (map nomeFriendlyToken possiveis)
+    in if token `elem` follow && not (null possiveis)
+         then if length possiveis == 1
+              then "Erro de sintaxe: esperava " ++ ntFriendly ++ " (" ++ listaPossiveis ++ ") antes de " ++ tkFriendly ++ "."
+              else "Erro de sintaxe: esperava " ++ ntFriendly ++ " (" ++ listaPossiveis ++ ") antes de " ++ tkFriendly ++ "."
+         else "Erro de sintaxe: " ++ tkFriendly ++ " não esperado aqui. Esperava " ++ ntFriendly ++ "."
+
 
 scanAux :: RDFA -> String -> [(String, String)] -> String -> [Int] -> String -> String -> String -> Either String [(String, String)]
 scanAux rdfa@(RDFA _ trans strt fnl) str acc word state lword ltoken rstr = 
@@ -438,7 +518,7 @@ parseAux ((a1, a2):as) ((Right q):qs) = if a1 /= q then Nothing else
         Just l -> Just (Right (a1, a2) : l)
 parseAux ((a1, a2):as) ((Left q):qs) =
     case find (\r -> isJust (parseAux ((a1, a2):as) (r ++ qs))) (tabela q a1) of
-        Nothing -> Nothing
+        Nothing -> error (erroTabela q a1)
         Just r -> Just (Left (q, length r) : fromJust (parseAux ((a1, a2):as) (r ++ qs)))
 parseAux _ _ = Nothing
 
