@@ -165,3 +165,56 @@ main = do
   teste12
   putStrLn "\n=== Espaços vazios na tabela LL(1) ==="
   print contaEspacosVazios
+  mainComCasos
+
+-- ============================================================
+-- Testes para outros casos de erro (casos 2, 3, 4, 5)
+-- ============================================================
+
+-- Teste 13 (Caso 2): token fora do FOLLOW → token inesperado no contexto
+-- Input : ( quote [ )
+-- Transição tentada: tabela "datum" "[" → [] (vazio)
+-- '[' NÃO está no FOLLOW de datum → token completamente errado aqui
+-- Mensagem: "Erro de sintaxe: '[' não é válido aqui. Esperava um identificador ou valor ('id')."
+teste13 :: IO ()
+teste13 = do
+  let tokens = [("(","("), ("quote","quote"), ("[","["), (")",")" )]
+  print $ parse tokens
+
+-- Teste 14 (Caso 3): terminal esperado não confere com token atual
+-- Input : ( begin x ]   (] no lugar de ))
+-- Transição: parser vai até o final esperando ")" mas encontra "]"
+-- Mensagem: "Erro de sintaxe: esperava ')' mas encontrou ']'."
+teste14 :: IO ()
+teste14 = do
+  let tokens = [("(","("), ("begin","begin"), ("id","x"), ("]","]")]
+  print $ parse tokens
+
+-- Teste 15 (Caso 4): tokens sobrando após expressão completa
+-- Input : x y   (dois ids, mas grammar só aceita um top-level-form)
+-- Depois de consumir "x", ainda sobra "y"
+-- Mensagem: "Erro de sintaxe: 'id' inesperado após o fim da expressão."
+teste15 :: IO ()
+teste15 = do
+  let tokens = [("id","x"), ("id","y")]
+  print $ parse tokens
+
+-- Teste 16 (Caso 5): fim de arquivo inesperado
+-- Input : ( if x y   (faltando o else e o fechamento)
+-- Mensagem: "Erro de sintaxe: fim de arquivo inesperado. Esperava uma expressão."
+teste16 :: IO ()
+teste16 = do
+  let tokens = [("(","("), ("if","if"), ("id","x"), ("id","y")]
+  print $ parse tokens
+
+mainComCasos :: IO ()
+mainComCasos = do
+  putStrLn "\n--- Outros casos de erro ---"
+  putStrLn "\n=== Teste 13 (Caso 2 - token fora do FOLLOW: [ em datum) ==="
+  runTeste teste13
+  putStrLn "\n=== Teste 14 (Caso 3 - terminal errado: ] no lugar de )) ==="
+  runTeste teste14
+  putStrLn "\n=== Teste 15 (Caso 4 - tokens sobrando: x y) ==="
+  runTeste teste15
+  putStrLn "\n=== Teste 16 (Caso 5 - fim inesperado: (if x y) ==="
+  runTeste teste16

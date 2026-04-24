@@ -84,19 +84,19 @@ nomeFriendlyToken "]"   = "']'"
 nomeFriendlyToken "$"   = "fim de arquivo"
 nomeFriendlyToken t     = "'" ++ t ++ "'"
 
--- Função de erro para tabela first-follow
+-- Função de erro para tabela first-follow (casos 1 e 2)
 erroTabela :: String -> String -> String
 erroTabela naoTerminal token =
-    let follow    = followSet naoTerminal
-        possiveis = possiveisGerados naoTerminal
-        tkFriendly = nomeFriendlyToken token
-        ntFriendly = nomeFriendlyNT naoTerminal
+    let follow         = followSet naoTerminal
+        possiveis      = possiveisGerados naoTerminal
+        tkFriendly     = nomeFriendlyToken token
+        ntFriendly     = nomeFriendlyNT naoTerminal
         listaPossiveis = intercalate " ou " (map nomeFriendlyToken possiveis)
+    -- Caso 1: token no FOLLOW → algo está faltando dentro da construção
     in if token `elem` follow && not (null possiveis)
-         then if length possiveis == 1
-              then "Erro de sintaxe: esperava " ++ ntFriendly ++ " (" ++ listaPossiveis ++ ") antes de " ++ tkFriendly ++ "."
-              else "Erro de sintaxe: esperava " ++ ntFriendly ++ " (" ++ listaPossiveis ++ ") antes de " ++ tkFriendly ++ "."
-         else "Erro de sintaxe: " ++ tkFriendly ++ " não esperado aqui. Esperava " ++ ntFriendly ++ "."
+         then "Erro de sintaxe: esperava " ++ ntFriendly ++ " (" ++ listaPossiveis ++ ") antes de " ++ tkFriendly ++ "."
+    -- Caso 2: token fora do FOLLOW → token completamente inesperado
+         else erroTokenInesperado naoTerminal token
 
 
 scanAux :: RDFA -> String -> [(String, String)] -> String -> [Int] -> String -> String -> String -> Either String [(String, String)]
@@ -510,17 +510,52 @@ tabela "module-path" "id" = [[Right "id"]]
 
 tabela _ _ = []
 
+-- Caso 2: token não está no FOLLOW do NT → token inesperado no contexto
+erroTokenInesperado :: String -> String -> String
+erroTokenInesperado naoTerminal token =
+    let tkFriendly = nomeFriendlyToken token
+        ntFriendly = nomeFriendlyNT naoTerminal
+        possiveis   = possiveisGerados naoTerminal
+        listaFirst  = intercalate " ou " (map nomeFriendlyToken possiveis)
+    in if null possiveis
+       then "Erro de sintaxe: " ++ tkFriendly ++ " não é válido neste contexto."
+       else "Erro de sintaxe: " ++ tkFriendly ++ " não é válido aqui. Esperava " ++ ntFriendly ++ " (" ++ listaFirst ++ ")."
+
+-- Caso 3: terminal esperado não confere com token atual
+erroTerminalEsperado :: String -> String -> String
+erroTerminalEsperado esperado encontrado =
+    let espFriendly  = nomeFriendlyToken esperado
+        encFriendly  = nomeFriendlyToken encontrado
+    in "Erro de sintaxe: esperava " ++ espFriendly ++ " mas encontrou " ++ encFriendly ++ "."
+
+-- Caso 4: tokens sobrando após expressão completa
+erroTokensSobrando :: String -> String
+erroTokensSobrando token =
+    "Erro de sintaxe: " ++ nomeFriendlyToken token ++ " inesperado após o fim da expressão."
+
+-- Caso 5: expressão incompleta, tokens acabaram
+erroFimInesperado :: String -> String
+erroFimInesperado naoTerminal =
+    "Erro de sintaxe: fim de arquivo inesperado. Esperava " ++ nomeFriendlyNT naoTerminal ++ "."
+
 parseAux :: [(String, String)] -> [Either String String] -> Maybe [Either (String, Int) (String, String)]
 parseAux [] [] = Just []
-parseAux ((a1, a2):as) ((Right q):qs) = if a1 /= q then Nothing else 
-    case parseAux as qs of
+-- Caso 5: tokens acabaram mas ainda há símbolos na pilha
+parseAux [] ((Left q):_)  = error (erroFimInesperado q)
+parseAux [] ((Right q):_) = error (erroFimInesperado q)
+-- Caso 4: pilha vazia mas ainda há tokens
+parseAux ((a1,_):_) [] = error (erroTokensSobrando a1)
+parseAux ((a1, a2):as) ((Right q):qs) =
+    -- Caso 3: terminal esperado não confere
+    if a1 /= q then error (erroTerminalEsperado q a1)
+    else case parseAux as qs of
         Nothing -> Nothing
         Just l -> Just (Right (a1, a2) : l)
 parseAux ((a1, a2):as) ((Left q):qs) =
     case find (\r -> isJust (parseAux ((a1, a2):as) (r ++ qs))) (tabela q a1) of
+        -- Caso 1 ou Caso 2: sem produção na tabela
         Nothing -> error (erroTabela q a1)
         Just r -> Just (Left (q, length r) : fromJust (parseAux ((a1, a2):as) (r ++ qs)))
-parseAux _ _ = Nothing
 
 parse :: [(String, String)] -> Maybe [Either (String, Int) (String, String)]
 parse = \a -> parseAux a [Left "top-level-form"]
