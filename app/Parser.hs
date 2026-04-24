@@ -3,6 +3,8 @@
 module Parser where
 
 import System.Environment
+import Data.List
+import Data.Maybe
 
 data RDFA = RDFA
     { states :: [Int]
@@ -428,17 +430,24 @@ tabela "module-path" "id" = [[Right "id"]]
 
 tabela _ _ = []
 
-parseAux :: [(String, String)] -> [Either String String] -> Bool
-parseAux [] [] = True
-parseAux ((a1, a2):as) ((Right q):qs) = if a1 /= q then False else parseAux as qs
-parseAux ((a1, a2):as) ((Left q):qs) = 
-    any (\r -> parseAux ((a1, a2):as) (r ++ qs)) (tabela a1 q)
-parseAux _ _ = False
+parseAux :: [(String, String)] -> [Either String String] -> Maybe [Either (String, Int) (String, String)]
+parseAux [] [] = Just []
+parseAux ((a1, a2):as) ((Right q):qs) = if a1 /= q then Nothing else 
+    case parseAux as qs of
+        Nothing -> Nothing
+        Just l -> Just (Right (a1, a2) : l)
+parseAux ((a1, a2):as) ((Left q):qs) =
+    case find (\r -> isJust (parseAux ((a1, a2):as) (r ++ qs))) (tabela q a1) of
+        Nothing -> Nothing
+        Just r -> Just (Left (q, length r) : fromJust (parseAux ((a1, a2):as) (r ++ qs)))
+parseAux _ _ = Nothing
 
-parse :: [(String, String)] -> Bool
-parse = \a -> parseAux a [] 
+parse :: [(String, String)] -> Maybe [Either (String, Int) (String, String)]
+parse = \a -> parseAux a [Left "top-level-form"]
 
 main :: IO ()
-main  = getArgs >>= \case
-    [file] -> readFile file >>= \text -> print (scan scanner_rdfa text)
+main  = getArgs >> case ["teste.txt"] of
+    [file] -> readFile file >>= \text -> case (scan scanner_rdfa "(if a1 a11 a111)") of
+        Left e -> print e
+        Right r -> print r >> print (parse r)
     _ -> print "Program must be run with 1 filepath as argument."
