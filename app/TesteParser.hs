@@ -7,7 +7,7 @@ import Control.Exception
 runTeste :: IO () -> IO ()
 runTeste t = catch t (\e -> putStrLn ("  " ++ show (e :: SomeException)))
 
-parsePrint :: [(String, String)] -> IO ()
+parsePrint :: [((String, String), Int)] -> IO ()
 parsePrint tokens = do
     let result = show (parse tokens)
     _ <- evaluate (length result)
@@ -43,7 +43,7 @@ contaEspacosVazios = length [ (nt, t) | nt <- naoTerminais, t <- terminais, tabe
 -- ')' está no FOLLOW de expr → erro genérico (muitas geraçoes possíveis)
 teste1 :: IO ()
 teste1 = do
-  let tokens = [("(", "("), (")", ")")]
+  let tokens = zip [("(", "("), (")", ")")] [0..]
   parsePrint tokens
 
 -- Teste válido: apenas um id
@@ -51,7 +51,7 @@ teste1 = do
 -- Transição: tabela "top-level-form" "id" → general-top-level-form → expr → id
 teste2 :: IO ()
 teste2 = do
-  let tokens = [("id", "x")]
+  let tokens = zip [("id", "x")] [0..]
   parsePrint tokens
 
 -- Teste 3: parser real - (quote )
@@ -60,7 +60,7 @@ teste2 = do
 -- ')' está no FOLLOW de datum → "Possível(s) id faltante(s) para 'datum'"
 teste3 :: IO ()
 teste3 = do
-  let tokens = [("(", "("), ("quote", "quote"), (")", ")")]
+  let tokens = zip [("(", "("), ("quote", "quote"), (")", ")")] [0..]
   parsePrint tokens
 
 -- Teste 4: parser real - (quote-syntax )
@@ -70,7 +70,7 @@ teste3 = do
 -- ')' está no FOLLOW de datum → "Possível(s) id faltante(s) para 'datum'"
 teste4 :: IO ()
 teste4 = do
-  let tokens = [("(", "("), ("quote-syntax", "quote-syntax"), (")", ")")]
+  let tokens = zip [("(", "("), ("quote-syntax", "quote-syntax"), (")", ")")] [0..]
   parsePrint tokens
 
 -- Teste 5: erroTabela direto para module-path
@@ -107,7 +107,7 @@ teste7 = putStrLn (erroTabela "declaration-keyword" ")")
 -- Mensagem: "Erro de sintaxe: esperava ligações de variáveis antes de ')'."
 teste8 :: IO ()
 teste8 = do
-  let tokens = [("(","("), ("let-values","let-values"), ("(","("), (")",")" ), ("id","x"), (")",")" )]
+  let tokens = zip [("(","("), ("let-values","let-values"), ("(","("), (")",")" ), ("id","x"), (")",")" )] [0..]
   parsePrint tokens
 
 -- Teste 9: erroTabela direto para top-level-form
@@ -184,7 +184,7 @@ main = do
 -- Mensagem: "Erro de sintaxe: '[' não é válido aqui. Esperava um identificador ou valor ('id')."
 teste13 :: IO ()
 teste13 = do
-  let tokens = [("(","("), ("quote","quote"), ("[","["), (")",")" )]
+  let tokens = zip [("(","("), ("quote","quote"), ("[","["), (")",")" )] [0..]
   parsePrint tokens
 
 -- Teste 14 (Caso 1/2): ']' não tem produção em expr-rep
@@ -193,7 +193,7 @@ teste13 = do
 -- ']' não está no FOLLOW de expr-rep → token inesperado no contexto
 teste14 :: IO ()
 teste14 = do
-  let tokens = [("(","("), ("begin","begin"), ("id","x"), ("]","]")]
+  let tokens = zip [("(","("), ("begin","begin"), ("id","x"), ("]","]")] [0..]
   parsePrint tokens
 
 -- Teste 15 (Caso 4): tokens sobrando após expressão completa
@@ -202,7 +202,7 @@ teste14 = do
 -- Mensagem: "Erro de sintaxe: 'id' inesperado após o fim da expressão."
 teste15 :: IO ()
 teste15 = do
-  let tokens = [("id","x"), ("id","y")]
+  let tokens = zip [("id","x"), ("id","y")] [0..]
   parsePrint tokens
 
 -- Teste 16 (Caso 5): fim de arquivo inesperado
@@ -210,7 +210,7 @@ teste15 = do
 -- Mensagem: "Erro de sintaxe: fim de arquivo inesperado. Esperava uma expressão."
 teste16 :: IO ()
 teste16 = do
-  let tokens = [("(","("), ("if","if"), ("id","x"), ("id","y")]
+  let tokens = zip [("(","("), ("if","if"), ("id","x"), ("id","y")] [0..]
   parsePrint tokens
 
 mainComCasos :: IO ()
