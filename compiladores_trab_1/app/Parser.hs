@@ -553,81 +553,89 @@ erroFimInesperado naoTerminal =
     "Erro de sintaxe: fim de arquivo inesperado. Esperava " ++ nomeFriendlyNT naoTerminal ++ "."
 
 -- Conta quantos tokens são consumidos antes de falhar (para escolher a melhor produção em caso de erro)
-parseAuxTokensConsumed :: [(String, String)] -> [Either String String] -> Int
+parseAuxTokensConsumed :: [((String, String), Int)] -> [Either String String] -> Int
 parseAuxTokensConsumed []        []           = maxBound
 parseAuxTokensConsumed _         []           = maxBound
 parseAuxTokensConsumed []        _            = 0
-parseAuxTokensConsumed ((a1,_):as) ((Right q):qs)
+parseAuxTokensConsumed (((a1,_),_):as) ((Right q):qs)
     | a1 == q   = let n = parseAuxTokensConsumed as qs
                   in if n == maxBound then maxBound else 1 + n
     | otherwise = 0
-parseAuxTokensConsumed ts@((a1,_):_) ((Left q):qs) =
+parseAuxTokensConsumed ts@(((a1,_),_):_) ((Left q):qs) =
     case tabela q a1 of
         [] -> 0
         rs -> maximum (map (\r -> parseAuxTokensConsumed ts (r ++ qs)) rs)
 
 -- Versão segura para backtracking: retorna Nothing em vez de lançar erro
-parseAuxSafe :: [(String, String)] -> [Either String String] -> Maybe [Either (String, Int) (String, String)]
+parseAuxSafe :: [((String, String), Int)] -> [Either String String] -> Maybe [Either (String, Int) ((String, String), Int)]
 parseAuxSafe [] [] = Just []
 parseAuxSafe [] _ = Nothing
 parseAuxSafe (_:_) [] = Nothing
-parseAuxSafe ((a1, a2):as) ((Right q):qs) =
+parseAuxSafe (((a1,a2),pos):as) ((Right q):qs) =
     if a1 /= q then Nothing
     else case parseAuxSafe as qs of
         Nothing -> Nothing
-        Just l  -> Just (Right (a1, a2) : l)
-parseAuxSafe ((a1, a2):as) ((Left q):qs) =
-    case find (\r -> isJust (parseAuxSafe ((a1, a2):as) (r ++ qs))) (tabela q a1) of
+        Just l  -> Just (Right ((a1,a2), pos) : l)
+parseAuxSafe ts@(((a1,a2),pos):as) ((Left q):qs) =
+    case find (\r -> isJust (parseAuxSafe ts (r ++ qs))) (tabela q a1) of
         Nothing -> Nothing
-        Just r  -> Just (Left (q, length r) : fromJust (parseAuxSafe ((a1, a2):as) (r ++ qs)))
+        Just r  -> Just (Left (q, length r) : fromJust (parseAuxSafe ts (r ++ qs)))
 
-parseAux :: [(String, String)] -> [Either String String] -> Maybe [Either (String, Int) (String, String)]
+nearbyText :: [((String,String), Int)] -> String
+nearbyText [] = ""
+nearbyText toks =
+    let slice = take 6 toks
+        parts = map (\((_, tk), _) -> tk) slice
+    in " | Próximo ao trecho: " ++ intercalate " " parts
+
+
+parseAux :: [((String, String), Int)] -> [Either String String] -> Maybe [Either (String, Int) ((String, String), Int)]
 parseAux [] [] = Just []
 -- Caso 5: tokens acabaram mas ainda há símbolos na pilha
 parseAux [] ((Left q):_)  = error (erroFimInesperado q)
 parseAux [] ((Right q):_) = error (erroFimInesperado q)
 -- Caso 4: pilha vazia mas ainda há tokens
-parseAux ((a1,_):_) [] = error (erroTokensSobrando a1)
-parseAux ((a1, a2):as) ((Right q):qs) =
+parseAux toks@(((a1,_),pos):_) [] = error (erroTokensSobrando a1 ++ nearbyText toks)
+parseAux toks@(((a1, a2),pos):as) ((Right q):qs) =
     -- Caso 3: terminal esperado não confere
-    if a1 /= q then error (erroTerminalEsperado q a1)
+    if a1 /= q then error (erroTerminalEsperado q a1 ++ nearbyText toks)
     else case parseAux as qs of
         Nothing -> Nothing
-        Just l -> Just (Right (a1, a2) : l)
-parseAux ((a1, a2):as) ((Left q):qs) =
+        Just l -> Just (Right ((a1, a2), pos) : l)
+parseAux toks@(((a1, a2),pos):as) ((Left q):qs) =
     let prods = tabela q a1
     in case prods of
-        [] -> error (erroTabela q a1)
-        _  -> case find (\r -> isJust (parseAuxSafe ((a1, a2):as) (r ++ qs))) prods of
-            Just r  -> Just (Left (q, length r) : fromJust (parseAux ((a1, a2):as) (r ++ qs)))
+        [] -> error (erroTabela q a1 ++ nearbyText toks)
+        _  -> case find (\r -> isJust (parseAuxSafe toks (r ++ qs))) prods of
+            Just r  -> Just (Left (q, length r) : fromJust (parseAux toks (r ++ qs)))
             -- Nenhuma produção parseia a entrada completa: escolhe a que vai mais fundo antes de falhar
             -- Em caso de empate, prefere a PRIMEIRA produção (preserva ordem da tabela)
             Nothing ->
-                let depth r = parseAuxTokensConsumed ((a1, a2):as) (r ++ qs)
+                let depth r = parseAuxTokensConsumed toks (r ++ qs)
                     r = foldl1 (\best cand -> if depth cand > depth best then cand else best) prods
-                in Just (Left (q, length r) : fromJust (parseAux ((a1, a2):as) (r ++ qs)))
+                in Just (Left (q, length r) : fromJust (parseAux toks (r ++ qs)))
 
-parse :: [(String, String)] -> Maybe [Either (String, Int) (String, String)]
+parse :: [((String, String), Int)] -> Maybe [Either (String, Int) ((String, String), Int)]
 parse = \a -> parseAux a [Left "top-level-form"]
 
-data Tree = Terminal (String, String) | NonTerminal String [Tree] deriving Show
+data Tree = Terminal ((String, String), Int) | NonTerminal String [Tree] deriving Show
 
-toTreeAux :: [Either (String, Int) (String, String)] -> [Tree] -> Maybe Tree
+toTreeAux :: [Either (String, Int) ((String, String), Int)] -> [Tree] -> Maybe Tree
 toTreeAux [] [t] = Just t
 toTreeAux ((Left (nt, n)) : ls) q = toTreeAux ls (NonTerminal nt (take n q) : drop n q)
 toTreeAux ((Right tkn) : ls) q = toTreeAux ls (Terminal tkn : q)
 toTreeAux _ _ = Nothing
 
-toTree :: [Either (String, Int) (String, String)] -> Maybe Tree
+toTree :: [Either (String, Int) ((String, String), Int)] -> Maybe Tree
 toTree l = toTreeAux (reverse l) []
-
 
 main :: IO ()
 main  = getArgs >>= \case 
     [file] -> readFile file >>= \text -> case (scan scanner_rdfa text) of
         Left e -> print e
-        Right r -> print r
-            >> case (parse r) of
-                    Nothing -> print "erro"
-                    Just t -> print (toTree t)
+        Right r -> let raux = zip r [0..]
+                  in print raux
+                     >> case (parse raux) of
+                            Nothing -> print "erro"
+                            Just t -> print (toTree t)
     _ -> print "Program must be run with 1 filepath as argument."
