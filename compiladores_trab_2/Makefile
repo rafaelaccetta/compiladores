@@ -9,23 +9,23 @@ all: compilador scanner_demo
 # Etapa 1 – Scanner: mostra tokens do arquivo de entrada
 demo-scanner: scanner_demo
 	@echo "=== ETAPA 1: SCANNER ==="
-	@echo "Entrada: examples_ok.scm"
+	@echo "Entrada: demo/01_scanner.scm"
 	@echo ""
-	./scanner_demo < examples_ok.scm
+	./scanner_demo < demo/01_scanner.scm
 
 # Etapa 2 – Parser: mostra AST e Python gerado
 demo-parser: compilador
 	@echo "=== ETAPA 2: PARSER ==="
-	@echo "Entrada: tests/demo_parser.scm"
+	@echo "Entrada: demo/02_parser.scm"
 	@echo ""
-	./compilador --ast < tests/demo_parser.scm
+	./compilador --ast < demo/02_parser.scm
 
 # Etapa 3 – Semantico: mostra erros de tipo e contexto
 demo-sem-err: compilador
 	@echo "=== ETAPA 3: VERIFICACAO SEMANTICA (erros esperados) ==="
-	@echo "Entrada: tests/semantic_error.scm"
+	@echo "Entrada: demo/03_semantic.scm"
 	@echo ""
-	-./compilador < tests/semantic_error.scm 2>&1
+	-./compilador < demo/03_semantic.scm 2>&1
 
 demo-sem-ok: compilador
 	@echo "=== ETAPA 3: VERIFICACAO SEMANTICA (sem erros) ==="
@@ -36,9 +36,9 @@ demo-sem-ok: compilador
 # Etapa 4 – Geracao de codigo Python
 demo-codegen: compilador
 	@echo "=== ETAPA 4: GERACAO DE CODIGO PYTHON ==="
-	@echo "Entrada: tests/codegen_ok.scm"
+	@echo "Entrada: demo/04_codegen.scm"
 	@echo ""
-	./compilador < tests/codegen_ok.scm
+	./compilador < demo/04_codegen.scm
 
 # ─── Builds ───────────────────────────────────────────────────────────────────
 
@@ -63,6 +63,9 @@ run-err: compilador
 
 run-parse-ok: compilador
 	./compilador < tests/parse_ok.scm
+
+run-parse-ok-simple: compilador
+	./compilador < tests/parse_ok_simple.scm
 
 run-parse-err: compilador
 	./compilador < tests/parse_error.scm
