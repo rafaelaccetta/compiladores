@@ -36,9 +36,12 @@ demo-sem-ok: compilador
 # Etapa 4 – Geracao de codigo Python
 demo-codegen: compilador
 	@echo "=== ETAPA 4: GERACAO DE CODIGO PYTHON ==="
-	@echo "Entrada: demo/04_codegen.scm"
 	@echo ""
-	./compilador < demo/04_codegen.scm
+	@echo "--- Scheme (entrada) ---"
+	@cat demo/04_codegen.scm
+	@echo ""
+	@echo "--- Python (saida) ---"
+	@./compilador < demo/04_codegen.scm
 
 # ─── Builds ───────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,6 @@
-(define (fat n) (if (= n 0) 1 (* n (fat (- n 1)))))
-(define (max a b) (if (> a b) a b))
-(let ((x 3) (y 4)) (+ x y))
-(fat 6)
-(max 10 7)
+(define (abs x) (if (< x 0) (- 0 x) x))
+(define (entre? x lo hi) (and (> x lo) (< x hi)))
+
+(let ((a 3) (b 4)) (+ (* a a) (* b b)))
+(abs -7)
+(entre? 5 1 10)
