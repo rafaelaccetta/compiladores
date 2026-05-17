@@ -137,11 +137,19 @@ void yyerror(const char *s) {
     fprintf(stderr, "Parse error at line %d: %s\n", line_no, s);
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+    int show_ast = (argc > 1 && strcmp(argv[1], "--ast") == 0);
+
     if (yyparse() != 0)
         return 1;
     if (!parse_result)
         return 0;
+
+    if (show_ast) {
+        printf("=== AST ===\n");
+        print_ast(parse_result, 0);
+        printf("\n=== PYTHON ===\n");
+    }
 
     int errors = check_program(parse_result);
     if (errors > 0) {

@@ -13,12 +13,12 @@ demo-scanner: scanner_demo
 	@echo ""
 	./scanner_demo < examples_ok.scm
 
-# Etapa 2 – Parser: parse + codegen de arquivo valido
+# Etapa 2 – Parser: mostra AST e Python gerado
 demo-parser: compilador
 	@echo "=== ETAPA 2: PARSER ==="
-	@echo "Entrada: tests/parse_ok.scm (programa valido -> gera Python sem erros)"
+	@echo "Entrada: tests/parse_ok.scm"
 	@echo ""
-	./compilador < tests/parse_ok.scm
+	./compilador --ast < tests/parse_ok.scm
 
 # Etapa 3 – Semantico: mostra erros de tipo e contexto
 demo-sem-err: compilador
