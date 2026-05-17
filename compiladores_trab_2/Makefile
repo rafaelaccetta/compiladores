@@ -34,5 +34,8 @@ run-sem-err: compilador
 run-codegen: compilador
 	./compilador < tests/codegen_ok.scm
 
+run-codegen-simple: compilador
+	./compilador < tests/codegen_ok_simple.scm
+
 clean:
 	rm -f compilador scanner lex.yy.c parser.tab.c parser.tab.h
