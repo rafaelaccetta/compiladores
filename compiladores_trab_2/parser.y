@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ast.h"
+#include "semantic.h"
+#include "codegen.h"
 
 extern int yylex(void);
 extern int line_no;
@@ -136,8 +138,17 @@ void yyerror(const char *s) {
 }
 
 int main(void) {
-    if (yyparse() == 0 && parse_result) {
-        print_ast(parse_result, 0);
+    if (yyparse() != 0)
+        return 1;
+    if (!parse_result)
+        return 0;
+
+    int errors = check_program(parse_result);
+    if (errors > 0) {
+        fprintf(stderr, "%d semantic error(s) found.\n", errors);
+        return 1;
     }
+
+    gen_program(parse_result, stdout);
     return 0;
 }

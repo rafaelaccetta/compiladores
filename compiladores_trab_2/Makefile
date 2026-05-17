@@ -4,8 +4,8 @@ BISON = bison
 
 all: compilador
 
-compilador: lex.yy.c parser.tab.c ast.c
-	$(CC) -o compilador lex.yy.c parser.tab.c ast.c
+compilador: lex.yy.c parser.tab.c ast.c semantic.c codegen.c
+	$(CC) -o compilador lex.yy.c parser.tab.c ast.c semantic.c codegen.c
 
 parser.tab.c parser.tab.h: parser.y
 	$(BISON) -d parser.y
@@ -24,6 +24,15 @@ run-parse-ok: compilador
 
 run-parse-err: compilador
 	./compilador < tests/parse_error.scm
+
+run-sem-ok: compilador
+	./compilador < tests/semantic_ok.scm
+
+run-sem-err: compilador
+	./compilador < tests/semantic_error.scm
+
+run-codegen: compilador
+	./compilador < tests/codegen_ok.scm
 
 clean:
 	rm -f compilador scanner lex.yy.c parser.tab.c parser.tab.h
