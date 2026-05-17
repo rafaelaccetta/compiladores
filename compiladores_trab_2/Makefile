@@ -16,9 +16,9 @@ demo-scanner: scanner_demo
 # Etapa 2 – Parser: mostra AST e Python gerado
 demo-parser: compilador
 	@echo "=== ETAPA 2: PARSER ==="
-	@echo "Entrada: tests/parse_ok.scm"
+	@echo "Entrada: tests/demo_parser.scm"
 	@echo ""
-	./compilador --ast < tests/parse_ok.scm
+	./compilador --ast < tests/demo_parser.scm
 
 # Etapa 3 – Semantico: mostra erros de tipo e contexto
 demo-sem-err: compilador

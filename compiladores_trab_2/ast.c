@@ -108,94 +108,106 @@ Node *make_binding(char *name, Node *expr) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Tree-drawing printer                                                 */
 
-static void do_indent(int indent) {
-    for (int i = 0; i < indent; i++) printf("  ");
+static void build_label(Node *node, char *buf, size_t size) {
+    switch (node->type) {
+        case NODE_PROGRAM:    snprintf(buf, size, "Program"); break;
+        case NODE_DEFINE_VAR: snprintf(buf, size, "define %s", node->sval); break;
+        case NODE_DEFINE_FUN: {
+            char params[256] = "";
+            for (Node *p = node->child1; p; p = p->next) {
+                if (params[0]) strncat(params, " ", sizeof(params)-strlen(params)-1);
+                strncat(params, p->sval, sizeof(params)-strlen(params)-1);
+            }
+            snprintf(buf, size, "define (%s %s)", node->sval, params);
+            break;
+        }
+        case NODE_INT:        snprintf(buf, size, "%d", node->ival); break;
+        case NODE_BOOL:       snprintf(buf, size, "%s", node->ival ? "#t" : "#f"); break;
+        case NODE_ID:         snprintf(buf, size, "%s", node->sval); break;
+        case NODE_IF:         snprintf(buf, size, "if"); break;
+        case NODE_LET:        snprintf(buf, size, "let"); break;
+        case NODE_SET:        snprintf(buf, size, "set! %s", node->sval); break;
+        case NODE_BINOP:      snprintf(buf, size, "%s", node->sval); break;
+        case NODE_UNOP:       snprintf(buf, size, "%s", node->sval); break;
+        case NODE_CALL:       snprintf(buf, size, "(%s ...)", node->sval); break;
+        case NODE_BINDING:    snprintf(buf, size, "bind %s", node->sval); break;
+        default:              snprintf(buf, size, "?(%d)", node->type); break;
+    }
 }
 
-/*
- * print_ast prints the single node `node` and its children.
- * It does NOT follow node->next; callers iterate lists explicitly.
- */
-void print_ast(Node *node, int indent) {
-    if (!node) return;
-    do_indent(indent);
+static int list_len(Node *n) {
+    int c = 0; for (; n; n = n->next) c++; return c;
+}
 
+static void print_child(Node *node, const char *prefix, int is_last);
+
+static void print_children_of(Node *node, const char *prefix) {
     switch (node->type) {
-        case NODE_PROGRAM:
-            printf("Program\n");
-            for (Node *f = node->child1; f; f = f->next)
-                print_ast(f, indent + 1);
+        case NODE_PROGRAM: {
+            int n = list_len(node->child1), i = 0;
+            for (Node *f = node->child1; f; f = f->next, i++)
+                print_child(f, prefix, i == n - 1);
             break;
-
+        }
         case NODE_DEFINE_VAR:
-            printf("DefineVar(%s)\n", node->sval);
-            print_ast(node->child1, indent + 1);
+            print_child(node->child1, prefix, 1);
             break;
-
         case NODE_DEFINE_FUN:
-            printf("DefineFun(%s) params:", node->sval);
-            for (Node *p = node->child1; p; p = p->next)
-                printf(" %s", p->sval);
-            printf("\n");
-            print_ast(node->child2, indent + 1);
+            print_child(node->child2, prefix, 1);
             break;
-
-        case NODE_INT:
-            printf("Int(%d)\n", node->ival);
-            break;
-
-        case NODE_BOOL:
-            printf("Bool(%s)\n", node->ival ? "#t" : "#f");
-            break;
-
-        case NODE_ID:
-            printf("Id(%s)\n", node->sval);
-            break;
-
         case NODE_IF:
-            printf("If\n");
-            print_ast(node->child1, indent + 1);
-            print_ast(node->child2, indent + 1);
-            print_ast(node->child3, indent + 1);
+            print_child(node->child1, prefix, 0);
+            print_child(node->child2, prefix, 0);
+            print_child(node->child3, prefix, 1);
             break;
-
-        case NODE_LET:
-            printf("Let\n");
-            for (Node *b = node->child1; b; b = b->next) {
-                do_indent(indent + 1);
-                printf("Binding(%s)\n", b->sval);
-                print_ast(b->child1, indent + 2);
-            }
-            do_indent(indent + 1);
-            printf("Body\n");
-            print_ast(node->child2, indent + 2);
+        case NODE_LET: {
+            int nb = list_len(node->child1), i = 0;
+            for (Node *b = node->child1; b; b = b->next, i++)
+                print_child(b, prefix, (i == nb - 1) && !node->child2);
+            if (node->child2)
+                print_child(node->child2, prefix, 1);
             break;
-
+        }
+        case NODE_BINDING:
+            print_child(node->child1, prefix, 1);
+            break;
         case NODE_SET:
-            printf("Set!(%s)\n", node->sval);
-            print_ast(node->child1, indent + 1);
+            print_child(node->child1, prefix, 1);
             break;
-
         case NODE_BINOP:
-            printf("BinOp(%s)\n", node->sval);
-            print_ast(node->child1, indent + 1);
-            print_ast(node->child2, indent + 1);
+            print_child(node->child1, prefix, 0);
+            print_child(node->child2, prefix, 1);
             break;
-
         case NODE_UNOP:
-            printf("UnOp(%s)\n", node->sval);
-            print_ast(node->child1, indent + 1);
+            print_child(node->child1, prefix, 1);
             break;
-
-        case NODE_CALL:
-            printf("Call(%s)\n", node->sval);
-            for (Node *a = node->child1; a; a = a->next)
-                print_ast(a, indent + 1);
+        case NODE_CALL: {
+            int n = list_len(node->child1), i = 0;
+            for (Node *a = node->child1; a; a = a->next, i++)
+                print_child(a, prefix, i == n - 1);
             break;
-
-        default:
-            printf("Unknown(%d)\n", node->type);
-            break;
+        }
+        default: break;
     }
+}
+
+static void print_child(Node *node, const char *prefix, int is_last) {
+    if (!node) return;
+    char label[256];
+    build_label(node, label, sizeof(label));
+    printf("%s%s %s\n", prefix, is_last ? "\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80" : "\xe2\x94\x9c\xe2\x94\x80\xe2\x94\x80", label);
+    char new_prefix[512];
+    snprintf(new_prefix, sizeof(new_prefix), "%s%s", prefix, is_last ? "    " : "\xe2\x94\x82   ");
+    print_children_of(node, new_prefix);
+}
+
+void print_ast(Node *node, int indent) {
+    (void)indent;
+    if (!node) return;
+    char label[256];
+    build_label(node, label, sizeof(label));
+    printf("%s\n", label);
+    print_children_of(node, "");
 }
