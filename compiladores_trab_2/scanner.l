@@ -1,8 +1,11 @@
 %{
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "ast.h"
+#include "parser.tab.h"
 
-static int line_no = 1;
+int line_no = 1;
 %}
 
 %option noyywrap
@@ -14,30 +17,31 @@ COMMENT    ;[^\n]*
 
 %%
 
-"("                 { printf("LPAREN\n"); }
-")"                 { printf("RPAREN\n"); }
+"("                 { return LPAREN; }
+")"                 { return RPAREN; }
 
-"define"            { printf("DEFINE\n"); }
-"if"                { printf("IF\n"); }
-"let"               { printf("LET\n"); }
-"set!"              { printf("SET\n"); }
+"define"            { return DEFINE; }
+"if"                { return IF; }
+"let"               { return LET; }
+"set!"              { return SET; }
 
-"+"                 { printf("PLUS\n"); }
-"-"                 { printf("MINUS\n"); }
-"*"                 { printf("MUL\n"); }
-"/"                 { printf("DIV\n"); }
+"+"                 { return PLUS; }
+"-"                 { return MINUS; }
+"*"                 { return MUL; }
+"/"                 { return DIV; }
 
-"<"                 { printf("LT\n"); }
-">"                 { printf("GT\n"); }
-"="                 { printf("EQ\n"); }
+"<"                 { return LT; }
+">"                 { return GT; }
+"="                 { return EQ; }
 
-"and"               { printf("AND\n"); }
-"or"                { printf("OR\n"); }
-"not"               { printf("NOT\n"); }
+"and"               { return AND; }
+"or"                { return OR; }
+"not"               { return NOT; }
 
-"#t"|"#f"          { printf("BOOL(%s)\n", yytext); }
-{INT}               { printf("INT(%s)\n", yytext); }
-{ID}                { printf("ID(%s)\n", yytext); }
+"#t"                { yylval.ival = 1; return BOOL; }
+"#f"                { yylval.ival = 0; return BOOL; }
+{INT}               { yylval.ival = atoi(yytext); return INT; }
+{ID}                { yylval.sval = strdup(yytext); return ID; }
 
 {WS}                { /* ignore whitespace */ }
 {COMMENT}           { /* ignore comment */ }
@@ -49,8 +53,3 @@ COMMENT    ;[^\n]*
                     }
 
 %%
-
-int main(void) {
-    yylex();
-    return 0;
-}

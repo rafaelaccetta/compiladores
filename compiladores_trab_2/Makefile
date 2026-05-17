@@ -1,19 +1,29 @@
-CC = gcc
-FLEX = flex
+CC    = gcc
+FLEX  = flex
+BISON = bison
 
-all: scanner
+all: compilador
 
-scanner: lex.yy.c
-	$(CC) -o scanner lex.yy.c
+compilador: lex.yy.c parser.tab.c ast.c
+	$(CC) -o compilador lex.yy.c parser.tab.c ast.c
 
-lex.yy.c: scanner.l
+parser.tab.c parser.tab.h: parser.y
+	$(BISON) -d parser.y
+
+lex.yy.c: scanner.l parser.tab.h
 	$(FLEX) scanner.l
 
-run-ok: scanner
-	./scanner < examples_ok.scm
+run-ok: compilador
+	./compilador < examples_ok.scm
 
-run-err: scanner
-	./scanner < examples_lex_error.scm
+run-err: compilador
+	./compilador < examples_lex_error.scm
+
+run-parse-ok: compilador
+	./compilador < tests/parse_ok.scm
+
+run-parse-err: compilador
+	./compilador < tests/parse_error.scm
 
 clean:
-	rm -f scanner lex.yy.c
+	rm -f compilador scanner lex.yy.c parser.tab.c parser.tab.h
