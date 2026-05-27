@@ -26,6 +26,7 @@
 
 ; --- Operadores binarios ---
 (+ 1 2)
+ (+ 1 2 3 4)
 (- 10 3)
 (* 4 5)
 (/ 8 2)
@@ -43,6 +44,13 @@
 (soma 1 2)
 (fat 5)
 (identidade 99)
+
+; --- Listas ---
+(list 1 2 3)
+(car (list 10 20 30))
+(cdr (list 10 20 30))
+(cons 5 (list 6 7))
+(null? (list))
 
 ; --- Numeros negativos ---
 (define neg -5)

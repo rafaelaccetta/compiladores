@@ -12,6 +12,7 @@
 
 ; Operadores aritmeticos
 (+ x 1)
+(+ 1 2 3 4)
 (- x 1)
 (* x 2)
 (/ x 2)
@@ -46,3 +47,10 @@
 
 ; Aninhamento profundo
 (if (and (> x 0) (not flag)) (soma x 1) (fat x))
+
+; Listas
+(list 1 2 3)
+(car (list 10 20 30))
+(cdr (list 10 20 30))
+(cons 5 (list 6 7))
+(null? (list))

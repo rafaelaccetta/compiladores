@@ -14,6 +14,13 @@
 
 (if (> x 0) (+ x 1) (- x 1))
 
+(+ 1 2 3 4)
+(list 1 2 3)
+(car (list 10 20 30))
+(cdr (list 10 20 30))
+(cons 5 (list 6 7))
+(null? (list))
+
 (and #t (not #f))
 
 (soma 10 20)
