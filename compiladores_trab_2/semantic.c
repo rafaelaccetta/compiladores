@@ -74,6 +74,7 @@ static const char *type_name(Type t) {
     switch (t) {
         case TYPE_INT:     return "int";
         case TYPE_BOOL:    return "bool";
+        case TYPE_LIST:    return "list";
         case TYPE_FUN:     return "fun";
         case TYPE_UNKNOWN: return "unknown";
         case TYPE_ERROR:   return "error";
@@ -305,6 +306,49 @@ static Type check_expr(Node *node, Scope *scope) {
             }
 
             return e->fun->ret_type;
+        }
+
+        case NODE_LIST: {
+            for (Node *a = node->child1; a; a = a->next)
+                check_expr(a, scope);
+            return TYPE_LIST;
+        }
+
+        case NODE_CAR: {
+            Type t = check_expr(node->child1, scope);
+            if (t != TYPE_LIST && t != TYPE_UNKNOWN && t != TYPE_ERROR) {
+                sem_error("car: argument must be a list");
+                return TYPE_ERROR;
+            }
+            return TYPE_UNKNOWN;  /* element type not tracked */
+        }
+
+        case NODE_CDR: {
+            Type t = check_expr(node->child1, scope);
+            if (t != TYPE_LIST && t != TYPE_UNKNOWN && t != TYPE_ERROR) {
+                sem_error("cdr: argument must be a list");
+                return TYPE_ERROR;
+            }
+            return TYPE_LIST;
+        }
+
+        case NODE_CONS: {
+            check_expr(node->child1, scope);   /* element: any type */
+            Type lt = check_expr(node->child2, scope);
+            if (lt != TYPE_LIST && lt != TYPE_UNKNOWN && lt != TYPE_ERROR) {
+                sem_error("cons: second argument must be a list");
+                return TYPE_ERROR;
+            }
+            return TYPE_LIST;
+        }
+
+        case NODE_NULL_CHECK: {
+            Type t = check_expr(node->child1, scope);
+            if (t != TYPE_LIST && t != TYPE_UNKNOWN && t != TYPE_ERROR) {
+                sem_error("null?: argument must be a list");
+                return TYPE_ERROR;
+            }
+            return TYPE_BOOL;
         }
 
         default:

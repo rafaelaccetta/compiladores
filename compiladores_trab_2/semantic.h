@@ -6,6 +6,7 @@
 typedef enum {
     TYPE_INT,
     TYPE_BOOL,
+    TYPE_LIST,
     TYPE_FUN,
     TYPE_UNKNOWN,  /* parameter or unresolved */
     TYPE_ERROR     /* sentinel: propagate silently */

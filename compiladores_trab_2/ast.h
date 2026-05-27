@@ -15,7 +15,12 @@ typedef enum {
     NODE_UNOP,
     NODE_CALL,
     NODE_PARAM,
-    NODE_BINDING
+    NODE_BINDING,
+    NODE_LIST,
+    NODE_CAR,
+    NODE_CDR,
+    NODE_CONS,
+    NODE_NULL_CHECK
 } NodeType;
 
 typedef struct Node {
@@ -43,6 +48,11 @@ Node *make_unop(const char *op, Node *operand);
 Node *make_call(char *name, Node *args);
 Node *make_param(char *name, Node *next_param);
 Node *make_binding(char *name, Node *expr);
+Node *make_list(Node *elems);
+Node *make_car(Node *lst);
+Node *make_cdr(Node *lst);
+Node *make_cons(Node *elem, Node *lst);
+Node *make_null_check(Node *lst);
 
 /* pretty-print the AST to stdout */
 void print_ast(Node *node, int indent);

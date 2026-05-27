@@ -107,6 +107,37 @@ Node *make_binding(char *name, Node *expr) {
     return n;
 }
 
+Node *make_list(Node *elems) {
+    Node *n = new_node(NODE_LIST);
+    n->child1 = elems;
+    return n;
+}
+
+Node *make_car(Node *lst) {
+    Node *n = new_node(NODE_CAR);
+    n->child1 = lst;
+    return n;
+}
+
+Node *make_cdr(Node *lst) {
+    Node *n = new_node(NODE_CDR);
+    n->child1 = lst;
+    return n;
+}
+
+Node *make_cons(Node *elem, Node *lst) {
+    Node *n = new_node(NODE_CONS);
+    n->child1 = elem;
+    n->child2 = lst;
+    return n;
+}
+
+Node *make_null_check(Node *lst) {
+    Node *n = new_node(NODE_NULL_CHECK);
+    n->child1 = lst;
+    return n;
+}
+
 /* ------------------------------------------------------------------ */
 /* Tree-drawing printer                                                 */
 
@@ -133,6 +164,11 @@ static void build_label(Node *node, char *buf, size_t size) {
         case NODE_UNOP:       snprintf(buf, size, "%s", node->sval); break;
         case NODE_CALL:       snprintf(buf, size, "(%s ...)", node->sval); break;
         case NODE_BINDING:    snprintf(buf, size, "bind %s", node->sval); break;
+        case NODE_LIST:       snprintf(buf, size, "list"); break;
+        case NODE_CAR:        snprintf(buf, size, "car"); break;
+        case NODE_CDR:        snprintf(buf, size, "cdr"); break;
+        case NODE_CONS:       snprintf(buf, size, "cons"); break;
+        case NODE_NULL_CHECK: snprintf(buf, size, "null?"); break;
         default:              snprintf(buf, size, "?(%d)", node->type); break;
     }
 }
@@ -189,6 +225,21 @@ static void print_children_of(Node *node, const char *prefix) {
                 print_child(a, prefix, i == n - 1);
             break;
         }
+        case NODE_LIST: {
+            int n = list_len(node->child1), i = 0;
+            for (Node *a = node->child1; a; a = a->next, i++)
+                print_child(a, prefix, i == n - 1);
+            break;
+        }
+        case NODE_CAR:
+        case NODE_CDR:
+        case NODE_NULL_CHECK:
+            print_child(node->child1, prefix, 1);
+            break;
+        case NODE_CONS:
+            print_child(node->child1, prefix, 0);
+            print_child(node->child2, prefix, 1);
+            break;
         default: break;
     }
 }

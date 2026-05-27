@@ -111,6 +111,44 @@ static void gen_expr(Node *node, FILE *out) {
             break;
         }
 
+        case NODE_LIST: {
+            fprintf(out, "[");
+            int first = 1;
+            for (Node *a = node->child1; a; a = a->next) {
+                if (!first) fprintf(out, ", ");
+                gen_expr(a, out);
+                first = 0;
+            }
+            fprintf(out, "]");
+            break;
+        }
+
+        case NODE_CAR:
+            fprintf(out, "(");
+            gen_expr(node->child1, out);
+            fprintf(out, ")[0]");
+            break;
+
+        case NODE_CDR:
+            fprintf(out, "(");
+            gen_expr(node->child1, out);
+            fprintf(out, ")[1:]");
+            break;
+
+        case NODE_CONS:
+            fprintf(out, "([");
+            gen_expr(node->child1, out);
+            fprintf(out, "] + ");
+            gen_expr(node->child2, out);
+            fprintf(out, ")");
+            break;
+
+        case NODE_NULL_CHECK:
+            fprintf(out, "(");
+            gen_expr(node->child1, out);
+            fprintf(out, " == [])");
+            break;
+
         default:
             break;
     }

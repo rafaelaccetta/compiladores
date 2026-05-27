@@ -24,6 +24,11 @@ COMMENT    ;[^\n]*
 "if"                { return IF; }
 "let"               { return LET; }
 "set!"              { return SET; }
+"list"              { return LIST_KW; }
+"car"               { return CAR; }
+"cdr"               { return CDR; }
+"cons"              { return CONS; }
+"null?"             { return NULLQ; }
 
 "+"                 { return PLUS; }
 "-"                 { return MINUS; }

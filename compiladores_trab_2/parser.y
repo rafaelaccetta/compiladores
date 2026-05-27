@@ -11,6 +11,22 @@ extern int line_no;
 void yyerror(const char *s);
 
 Node *parse_result = NULL;
+
+/* Left-fold a list of exprs into nested binops: (+ 1 2 3) -> (+ (+ 1 2) 3) */
+static Node *fold_binop(const char *op, Node *args) {
+    if (!args) return make_int(0);   /* (op) with no args: identity */
+    if (!args->next) { args->next = NULL; return args; }  /* single arg */
+    Node *acc = args;
+    Node *rest = args->next;
+    acc->next = NULL;
+    while (rest) {
+        Node *nxt = rest->next;
+        rest->next = NULL;
+        acc = make_binop(op, acc, rest);
+        rest = nxt;
+    }
+    return acc;
+}
 %}
 
 %define parse.error verbose
@@ -28,6 +44,7 @@ Node *parse_result = NULL;
 %token PLUS MINUS MUL DIV
 %token LT GT EQ
 %token AND OR NOT
+%token LIST_KW CAR CDR CONS NULLQ
 
 %type <node> program forms form expr
 %type <node> if_expr let_expr set_expr call_expr
@@ -105,22 +122,27 @@ set_expr
     ;
 
 /*
- * Operators are explicitly enumerated with fixed arity.
- * Binary: +  -  *  /  <  >  =  and  or
- * Unary:  not
+ * Operators: variadic +  -  *  / and or are folded into nested binops;
+ * binary only: <  >  =;  unary: not.
+ * List primitives: list car cdr cons null?
  * Function calls: (id args...)
  */
 call_expr
-    : LPAREN PLUS  expr expr RPAREN   { $$ = make_binop("+",   $3, $4); }
-    | LPAREN MINUS expr expr RPAREN   { $$ = make_binop("-",   $3, $4); }
-    | LPAREN MUL   expr expr RPAREN   { $$ = make_binop("*",   $3, $4); }
-    | LPAREN DIV   expr expr RPAREN   { $$ = make_binop("/",   $3, $4); }
+    : LPAREN PLUS  args RPAREN        { $$ = fold_binop("+",   $3); }
+    | LPAREN MINUS args RPAREN        { $$ = fold_binop("-",   $3); }
+    | LPAREN MUL   args RPAREN        { $$ = fold_binop("*",   $3); }
+    | LPAREN DIV   args RPAREN        { $$ = fold_binop("/",   $3); }
     | LPAREN LT    expr expr RPAREN   { $$ = make_binop("<",   $3, $4); }
     | LPAREN GT    expr expr RPAREN   { $$ = make_binop(">",   $3, $4); }
     | LPAREN EQ    expr expr RPAREN   { $$ = make_binop("=",   $3, $4); }
-    | LPAREN AND   expr expr RPAREN   { $$ = make_binop("and", $3, $4); }
-    | LPAREN OR    expr expr RPAREN   { $$ = make_binop("or",  $3, $4); }
+    | LPAREN AND   args RPAREN        { $$ = fold_binop("and", $3); }
+    | LPAREN OR    args RPAREN        { $$ = fold_binop("or",  $3); }
     | LPAREN NOT   expr RPAREN        { $$ = make_unop("not",  $3); }
+    | LPAREN LIST_KW args RPAREN      { $$ = make_list($3); }
+    | LPAREN CAR     expr RPAREN      { $$ = make_car($3); }
+    | LPAREN CDR     expr RPAREN      { $$ = make_cdr($3); }
+    | LPAREN CONS    expr expr RPAREN { $$ = make_cons($3, $4); }
+    | LPAREN NULLQ   expr RPAREN      { $$ = make_null_check($3); }
     | LPAREN ID    args RPAREN        { $$ = make_call($2, $3); }
     ;
 
