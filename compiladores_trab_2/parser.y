@@ -12,10 +12,9 @@ void yyerror(const char *s);
 
 Node *parse_result = NULL;
 
-/* Left-fold a list of exprs into nested binops: (+ 1 2 3) -> (+ (+ 1 2) 3) */
 static Node *fold_binop(const char *op, Node *args) {
-    if (!args) return make_int(0);   /* (op) with no args: identity */
-    if (!args->next) { args->next = NULL; return args; }  /* single arg */
+    if (!args) return make_int(0);
+    if (!args->next) { args->next = NULL; return args; }
     Node *acc = args;
     Node *rest = args->next;
     acc->next = NULL;
@@ -57,10 +56,6 @@ program
         { parse_result = make_program($1); }
     ;
 
-/*
- * forms -> form forms | empty
- * Builds a linked list via node->next (right-recursive, preserves order).
- */
 forms
     : /* empty */
         { $$ = NULL; }
@@ -121,12 +116,6 @@ set_expr
         { $$ = make_set($3, $4); }
     ;
 
-/*
- * Operators: variadic +  -  *  / and or are folded into nested binops;
- * binary only: <  >  =;  unary: not.
- * List primitives: list car cdr cons null?
- * Function calls: (id args...)
- */
 call_expr
     : LPAREN PLUS  args RPAREN        { $$ = fold_binop("+",   $3); }
     | LPAREN MINUS args RPAREN        { $$ = fold_binop("-",   $3); }

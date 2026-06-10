@@ -4,9 +4,6 @@
 #include "ast.h"
 #include "semantic.h"
 
-/* ------------------------------------------------------------------ */
-/* Symbol table                                                        */
-/* ------------------------------------------------------------------ */
 
 typedef struct FunInfo {
     int    arity;
@@ -17,8 +14,8 @@ typedef struct FunInfo {
 
 typedef struct Entry {
     char        *name;
-    Type         type;   /* TYPE_FUN if function */
-    FunInfo     *fun;    /* non-NULL iff type == TYPE_FUN */
+    Type         type;
+    FunInfo     *fun;
     struct Entry *next;
 } Entry;
 
@@ -42,7 +39,6 @@ static void scope_define(Scope *s, const char *name, Type type, FunInfo *fun) {
     s->entries = e;
 }
 
-/* Search current scope and all parents */
 static Entry *scope_lookup(Scope *s, const char *name) {
     for (Scope *sc = s; sc; sc = sc->parent)
         for (Entry *e = sc->entries; e; e = e->next)
@@ -51,7 +47,6 @@ static Entry *scope_lookup(Scope *s, const char *name) {
     return NULL;
 }
 
-/* Search only the innermost scope (for redeclaration detection) */
 static Entry *scope_lookup_local(Scope *s, const char *name) {
     for (Entry *e = s->entries; e; e = e->next)
         if (strcmp(e->name, name) == 0)
@@ -59,9 +54,6 @@ static Entry *scope_lookup_local(Scope *s, const char *name) {
     return NULL;
 }
 
-/* ------------------------------------------------------------------ */
-/* Error reporting                                                     */
-/* ------------------------------------------------------------------ */
 
 static int error_count = 0;
 
@@ -82,9 +74,6 @@ static const char *type_name(Type t) {
     }
 }
 
-/* ------------------------------------------------------------------ */
-/* Type checking                                                       */
-/* ------------------------------------------------------------------ */
 
 static Type check_expr(Node *node, Scope *scope);
 
@@ -96,7 +85,6 @@ static Type check_binop(Node *node, Scope *scope) {
 
     if (lt == TYPE_ERROR || rt == TYPE_ERROR) return TYPE_ERROR;
 
-    /* arithmetic: int x int -> int */
     if (strcmp(op, "+") == 0 || strcmp(op, "-") == 0 ||
         strcmp(op, "*") == 0 || strcmp(op, "/") == 0) {
         if (lt != TYPE_INT && lt != TYPE_UNKNOWN) {
@@ -114,7 +102,6 @@ static Type check_binop(Node *node, Scope *scope) {
         return TYPE_INT;
     }
 
-    /* comparison: int x int -> bool */
     if (strcmp(op, "<") == 0 || strcmp(op, ">") == 0 || strcmp(op, "=") == 0) {
         if (lt != TYPE_INT && lt != TYPE_UNKNOWN) {
             snprintf(msg, sizeof(msg),
@@ -131,7 +118,6 @@ static Type check_binop(Node *node, Scope *scope) {
         return TYPE_BOOL;
     }
 
-    /* boolean: bool x bool -> bool */
     if (strcmp(op, "and") == 0 || strcmp(op, "or") == 0) {
         if (lt != TYPE_BOOL && lt != TYPE_UNKNOWN) {
             snprintf(msg, sizeof(msg),
@@ -174,7 +160,6 @@ static Type check_expr(Node *node, Scope *scope) {
             return check_binop(node, scope);
 
         case NODE_UNOP: {
-            /* only 'not' */
             Type t = check_expr(node->child1, scope);
             if (t == TYPE_ERROR) return TYPE_ERROR;
             if (t != TYPE_BOOL && t != TYPE_UNKNOWN) {
@@ -214,7 +199,6 @@ static Type check_expr(Node *node, Scope *scope) {
         }
 
         case NODE_LET: {
-            /* Evaluate all binding expressions in the OUTER scope (standard let) */
             int count = 0;
             for (Node *b = node->child1; b; b = b->next) count++;
 
@@ -226,7 +210,6 @@ static Type check_expr(Node *node, Scope *scope) {
                 types[i] = check_expr(b->child1, scope);
             }
 
-            /* New scope with bound names */
             Scope *ls = scope_new(scope);
             for (int j = 0; j < count; j++) {
                 if (scope_lookup_local(ls, names[j])) {
@@ -280,7 +263,6 @@ static Type check_expr(Node *node, Scope *scope) {
                 return TYPE_ERROR;
             }
 
-            /* Check arity */
             int argc = 0;
             for (Node *a = node->child1; a; a = a->next) argc++;
             if (argc != e->fun->arity) {
@@ -291,7 +273,6 @@ static Type check_expr(Node *node, Scope *scope) {
                 return TYPE_ERROR;
             }
 
-            /* Check argument types */
             int j = 0;
             for (Node *a = node->child1; a; a = a->next, j++) {
                 Type at = check_expr(a, scope);
@@ -320,7 +301,7 @@ static Type check_expr(Node *node, Scope *scope) {
                 sem_error("car: argument must be a list");
                 return TYPE_ERROR;
             }
-            return TYPE_UNKNOWN;  /* element type not tracked */
+            return TYPE_UNKNOWN;
         }
 
         case NODE_CDR: {
@@ -356,9 +337,6 @@ static Type check_expr(Node *node, Scope *scope) {
     }
 }
 
-/* ------------------------------------------------------------------ */
-/* Form checking (top-level)                                           */
-/* ------------------------------------------------------------------ */
 
 static void check_form(Node *node, Scope *scope) {
     char msg[300];
@@ -385,7 +363,6 @@ static void check_form(Node *node, Scope *scope) {
                 return;
             }
 
-            /* Count and collect params */
             int arity = 0;
             for (Node *p = node->child1; p; p = p->next) arity++;
 
@@ -401,10 +378,8 @@ static void check_form(Node *node, Scope *scope) {
                 fun->param_types[i] = TYPE_UNKNOWN;
             }
 
-            /* Register BEFORE checking body to support self-recursion */
             scope_define(scope, node->sval, TYPE_FUN, fun);
 
-            /* Build function scope with params */
             Scope *fs = scope_new(scope);
             for (int j = 0; j < arity; j++) {
                 if (scope_lookup_local(fs, fun->param_names[j])) {
@@ -417,21 +392,16 @@ static void check_form(Node *node, Scope *scope) {
                 }
             }
 
-            /* Check body; update return type */
             fun->ret_type = check_expr(node->child2, fs);
             break;
         }
 
         default:
-            /* Standalone expression (including set!) */
             check_expr(node, scope);
             break;
     }
 }
 
-/* ------------------------------------------------------------------ */
-/* Entry point                                                         */
-/* ------------------------------------------------------------------ */
 
 int check_program(Node *program) {
     error_count = 0;

@@ -4,23 +4,6 @@
 #include "ast.h"
 #include "codegen.h"
 
-/*
- * Mapping (from DEFINICAO_LINGUAGEM.md):
- *   (define x e)         ->  x = <e>
- *   (define (f a b) e)   ->  def f(a, b):\n    return <e>
- *   (if c t e)           ->  (<t> if <c> else <e>)
- *   (let ((x a)(y b)) e) ->  (lambda x, y: <e>)(<a>, <b>)
- *   (set! x e)           ->  x = <e>
- *   (+ a b)              ->  (a + b)   [analogous for - * //]
- *   (< a b)              ->  (a < b)   [analogous for > ==>]
- *   (= a b)              ->  (a == b)
- *   (and a b)            ->  (a and b)
- *   (or a b)             ->  (a or b)
- *   (not a)              ->  (not a)
- *   (f a b)              ->  f(a, b)
- *   #t / #f              ->  True / False
- */
-
 static void gen_expr(Node *node, FILE *out);
 
 static void gen_expr(Node *node, FILE *out) {
@@ -46,7 +29,7 @@ static void gen_expr(Node *node, FILE *out) {
             if      (strcmp(op, "+")   == 0) py = "+";
             else if (strcmp(op, "-")   == 0) py = "-";
             else if (strcmp(op, "*")   == 0) py = "*";
-            else if (strcmp(op, "/")   == 0) py = "//";   /* integer division */
+            else if (strcmp(op, "/")   == 0) py = "//";
             else if (strcmp(op, "<")   == 0) py = "<";
             else if (strcmp(op, ">")   == 0) py = ">";
             else if (strcmp(op, "=")   == 0) py = "==";
@@ -68,18 +51,16 @@ static void gen_expr(Node *node, FILE *out) {
             break;
 
         case NODE_IF:
-            /* Python ternary: (then if cond else else) */
             fprintf(out, "(");
-            gen_expr(node->child2, out);   /* then */
+            gen_expr(node->child2, out);
             fprintf(out, " if ");
-            gen_expr(node->child1, out);   /* cond */
+            gen_expr(node->child1, out);
             fprintf(out, " else ");
-            gen_expr(node->child3, out);   /* else */
+            gen_expr(node->child3, out);
             fprintf(out, ")");
             break;
 
         case NODE_LET: {
-            /* (lambda params: body)(args) */
             fprintf(out, "(lambda");
             int first = 1;
             for (Node *b = node->child1; b; b = b->next) {
@@ -184,7 +165,6 @@ static void gen_form(Node *node, FILE *out) {
             break;
 
         default:
-            /* Standalone expression: emit as a statement */
             gen_expr(node, out);
             fprintf(out, "\n");
             break;

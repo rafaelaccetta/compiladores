@@ -48,8 +48,8 @@ COMMENT    ;[^\n]*
 {INT}               { yylval.ival = atoi(yytext); return INT; }
 {ID}                { yylval.sval = strdup(yytext); return ID; }
 
-{WS}                { /* ignore whitespace */ }
-{COMMENT}           { /* ignore comment */ }
+{WS}                { }
+{COMMENT}           { }
 \n                  { line_no++; }
 
 .                   {

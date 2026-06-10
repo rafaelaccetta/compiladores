@@ -25,15 +25,14 @@ typedef enum {
 
 typedef struct Node {
     NodeType     type;
-    int          ival;   /* INT value or BOOL (1/#t, 0/#f) */
-    char        *sval;   /* ID name, op string, or function name */
+    int          ival;
+    char        *sval;
     struct Node *child1;
     struct Node *child2;
-    struct Node *child3; /* used by NODE_IF for else branch */
-    struct Node *next;   /* links siblings in lists (forms, args, params, bindings) */
+    struct Node *child3;
+    struct Node *next;
 } Node;
 
-/* constructors */
 Node *make_program(Node *forms);
 Node *make_define_var(char *name, Node *expr);
 Node *make_define_fun(char *name, Node *params, Node *body);
@@ -54,7 +53,6 @@ Node *make_cdr(Node *lst);
 Node *make_cons(Node *elem, Node *lst);
 Node *make_null_check(Node *lst);
 
-/* pretty-print the AST to stdout */
 void print_ast(Node *node, int indent);
 
 #endif

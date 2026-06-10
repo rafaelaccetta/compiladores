@@ -138,9 +138,6 @@ Node *make_null_check(Node *lst) {
     return n;
 }
 
-/* ------------------------------------------------------------------ */
-/* Tree-drawing printer                                                 */
-
 static void build_label(Node *node, char *buf, size_t size) {
     switch (node->type) {
         case NODE_PROGRAM:    snprintf(buf, size, "Program"); break;
